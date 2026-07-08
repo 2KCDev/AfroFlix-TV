@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: afroflix-tv-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-afroflix_tv}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-afroflix_tv123}
+      POSTGRES_DB: ${POSTGRES_DB:-afroflix_tv_db}
+    volumes:
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-afroflix_tv} -d $${POSTGRES_DB:-afroflix_tv_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: afroflix-tv-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: afroflix-tv-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-afroflix_tv}:${POSTGRES_PASSWORD:-afroflix_tv123}@postgres:5432/${POSTGRES_DB:-afroflix_tv_db}
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set for deployment}
+      FRONTEND_URL: ${FRONTEND_URL:-https://afroflix-tv.com}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://afroflix-tv.com}
+      EMAIL_DELIVERY_MODE: ${EMAIL_DELIVERY_MODE:-resend}
+      RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY must be set for email delivery}
+      EMAIL_BRAND_NAME: ${EMAIL_BRAND_NAME:-AFROFLIX.TV}
+      EMAIL_NOREPLY: ${EMAIL_NOREPLY:-noreply@afroflix-tv.com}
+      EMAIL_INFO: ${EMAIL_INFO:-info@afroflix-tv.com}
+      EMAIL_ADMIN: ${EMAIL_ADMIN:-admin@afroflix-tv.com}
+      EMAIL_SUPPORT: ${EMAIL_SUPPORT:-support@afroflix-tv.com}
+      EMAIL_CONTACT: ${EMAIL_CONTACT:-contact@afroflix-tv.com}
+      EMAIL_CONTACT_RECIPIENTS: ${EMAIL_CONTACT_RECIPIENTS:-contact@afroflix-tv.com,support@afroflix-tv.com,admin@afroflix-tv.com,info@afroflix-tv.com}
+      EMAIL_INTERNAL_RECIPIENTS: ${EMAIL_INTERNAL_RECIPIENTS:-contact@afroflix-tv.com,support@afroflix-tv.com,admin@afroflix-tv.com,info@afroflix-tv.com}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:5000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    image: afroflix-tv-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_GOOGLE_SITE_VERIFICATION: ${VITE_GOOGLE_SITE_VERIFICATION:-}
+        VITE_GOOGLE_ANALYTICS_ID: ${VITE_GOOGLE_ANALYTICS_ID:-}
+        VITE_GOOGLE_ADSENSE_CLIENT_ID: ${VITE_GOOGLE_ADSENSE_CLIENT_ID:-}
+        VITE_GOOGLE_ADSENSE_ENABLED: ${VITE_GOOGLE_ADSENSE_ENABLED:-false}
+    container_name: afroflix-tv-frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-/api}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: afroflix-tv-network

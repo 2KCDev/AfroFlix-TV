@@ -1,0 +1,31 @@
+{
+  "name": "afroflix-tv-backend",
+  "version": "1.0.0",
+  "description": "Backend API pour la plateforme AfroFlix.TV",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "keywords": [
+    "afroflix.tv",
+    "cinema",
+    "api"
+  ],
+  "author": "AfroFlix.TV Platform",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "2.4.3",
+    "compression": "1.8.1",
+    "cors": "2.8.5",
+    "dotenv": "16.0.3",
+    "express": "4.22.2",
+    "express-rate-limit": "7.1.5",
+    "helmet": "7.1.0",
+    "joi": "17.13.4",
+    "jsonwebtoken": "9.0.2",
+    "morgan": "1.11.0",
+    "multer": "^2.2.0",
+    "pg": "8.10.0"
+  }
+}

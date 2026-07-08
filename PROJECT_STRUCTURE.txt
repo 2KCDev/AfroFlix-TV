@@ -1,0 +1,182 @@
+================================================================================
+                  PLATEFORME AFROFLIX.TV - STRUCTURE ACTUELLE
+================================================================================
+
+Racine:
+/home/celestin/mes-dossiers/NOLLYWOOD
+
+Architecture:
+- Frontend: React + Vite + Tailwind CSS, servi par Nginx en production.
+- Backend: Node.js + Express + PostgreSQL.
+- Base de donnees: PostgreSQL 15, schema dans docker/init-db.sql.
+- Deploiement: Docker Compose avec services postgres, backend et frontend.
+
+================================================================================
+DOSSIERS PRINCIPAUX
+================================================================================
+
+backend/
+  src/
+    index.js                    Demarrage Express, securite, routes API.
+    db/pool.js                  Connexion PostgreSQL.
+    db/init.js                  Migrations/contraintes appliquees au demarrage.
+    middleware/auth.js          JWT, optionalAuth, RBAC.
+    utils/validation.js         Validation Joi, email, mot de passe, URL, pagination.
+    controllers/                Logique metier.
+    routes/                     Routes Express.
+    services/emailService.js    Emails transactionnels.
+  uploads/posters/              Affiches uploadees.
+  Dockerfile
+  package.json
+  .env
+  .env.example
+
+frontend/
+  src/
+    App.jsx                     Routes React.
+    index.jsx                   Point d'entree.
+    services/api.js             Client API centralise.
+    context/AuthContext.jsx     Session utilisateur.
+    hooks/                      Hooks React.
+    pages/                      Pages publiques et admin.
+    components/                 Layout, cartes, formulaires, admin, communs.
+    styles/index.css            Styles globaux Tailwind.
+    utils/content.js            Contenus statiques et helpers.
+  public/
+    ads.txt
+    robots.txt
+    sitemap.xml
+  nginx.conf                    Serveur frontend + proxy /api et /uploads.
+  Dockerfile
+  Dockerfile.dev
+  package.json
+  vite.config.js
+
+docker/
+  init-db.sql                   Schema, contraintes, indexes, donnees initiales.
+
+docs/
+  DEPLOYMENT.md                 Guide de deploiement.
+  ADSENSE_CHECKLIST.md          Controle AdSense.
+  legal-pages/                  Textes legales sources.
+
+================================================================================
+FICHIERS RACINE IMPORTANTS
+================================================================================
+
+docker-compose.yml              Orchestration production locale.
+docker-compose.dev.yml          Orchestration developpement.
+.env                            Variables Docker Compose locales.
+cahier-des-charges.md           Cahier des charges conforme au projet reel.
+guide-complet.md                Guide complet utilisateur/admin.
+STRUCTURE.md                    Architecture detaillee pour developpeurs.
+README.md                       Presentation generale.
+API_DOCUMENTATION.md            Documentation API.
+QUICK_START.md / QUICKSTART.md  Demarrage rapide.
+
+================================================================================
+ROUTES FRONTEND
+================================================================================
+
+/                              Accueil
+/auth                          Connexion, inscription, reset password
+/films                         Liste films
+/films/:slug                   Fiche film
+/genre/:genre                  Films par genre
+/acteurs, /actors              Liste acteurs
+/acteurs/:slug, /actors/:slug  Fiche acteur
+/actualites, /blog             Articles
+/actualites/:slug, /blog/:slug Article
+/classements                   Classements
+/critiques                     Critiques, hors menu principal
+/recherche, /search            Recherche
+/favoris                       Favoris utilisateur, protege
+/admin/*                       Administration, protege
+/about                         A propos
+/contact                       Contact
+/privacy                       Confidentialite
+/terms                         Conditions
+/cookies                       Cookies
+/copyright                     Droits d'auteur
+/legal                         Mentions legales
+
+Menu principal:
+Accueil, Films, Acteurs, Actualites, Classements, Recherche.
+Le lien Critiques est volontairement absent du menu desktop, mobile et tablette.
+
+================================================================================
+ROUTES API
+================================================================================
+
+/api/auth                      register, login, forgot/reset password, me
+/api/films                     liste, detail, recherche, tendances, vues, gestion
+/api/actors et /api/acteurs    acteurs
+/api/articles                  articles, categories, gestion
+/api/genres                    genres, films par genre, gestion admin
+/api/comments                  commentaires, signalement, moderation
+/api/ratings                   notes et statistiques
+/api/favorites et /api/favoris favoris
+/api/contact                   contact public, lecture admin
+/api/admin                     stats, utilisateurs, profil admin
+/api/uploads                   upload affiches
+
+================================================================================
+BASE DE DONNEES
+================================================================================
+
+Tables:
+users, films, actors, genres, film_genres, film_actors, articles, comments,
+ratings, favorites, views, contact_messages, password_reset_tokens,
+comment_reports.
+
+Contraintes principales:
+- emails valides cote users, comments, contact_messages;
+- roles limites: user, editor, moderator, admin;
+- statuts limites: published, draft, archived;
+- notes entre 1 et 5;
+- annee film bornee;
+- duree film bornee;
+- commentaire entre 5 et 2000 caracteres;
+- slugs uniques;
+- relations uniques film/genre, film/acteur, favoris, ratings.
+
+================================================================================
+SECURITE
+================================================================================
+
+- Helmet + CSP.
+- CORS configure par variables d'environnement.
+- Rate limit global.
+- Rate limit specifique pour /api/auth.
+- JWT avec secret fort obligatoire en production.
+- Mots de passe bcrypt.
+- Politique mot de passe: 8 caracteres minimum avec lettre, chiffre et special.
+- Validation Joi centralisee.
+- Requetes SQL parametrees.
+- Reset tokens hashes, expirables, usage unique.
+- RBAC par role.
+- Upload limite aux images.
+- Anti-spam commentaires.
+- Anti-fraude vues et notes.
+
+================================================================================
+DOCKER
+================================================================================
+
+Services:
+- postgres: base PostgreSQL, volume postgres_data.
+- backend: API Express, port 5000.
+- frontend: Nginx + build React, port 80.
+
+Reseau:
+afroflix-tv-network
+
+Volumes:
+postgres_data
+./backend/uploads:/app/uploads
+
+Commandes utiles:
+docker compose up -d --build
+docker compose ps
+docker compose logs -f backend
+docker compose exec postgres psql -U afroflix_tv -d afroflix_tv_db -f /docker-entrypoint-initdb.d/init.sql

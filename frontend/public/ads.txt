@@ -1,0 +1,4 @@
+# ads.txt pour afroflix-tv.com
+# Remplacez ca-pub-xxxxxxxxxxxxxxxx par l'identifiant éditeur fourni par Google AdSense.
+# La ligne doit rester publiée à https://afroflix-tv.com/ads.txt
+# google.com, ca-pub-xxxxxxxxxxxxxxxx, DIRECT, f08c47fec0942fa0

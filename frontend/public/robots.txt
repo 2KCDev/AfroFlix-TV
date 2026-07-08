@@ -1,0 +1,16 @@
+# Robots.txt pour AFROFLIX.TV
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /search?
+Disallow: /recherche?
+Disallow: /favorites/
+Disallow: /favoris/
+
+# Crawl delay
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://afroflix-tv.com/sitemap.xml

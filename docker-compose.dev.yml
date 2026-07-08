@@ -1,0 +1,116 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: afroflix-tv-db
+    environment:
+      POSTGRES_USER: afroflix_tv
+      POSTGRES_PASSWORD: afroflix_tv123
+      POSTGRES_DB: afroflix_tv_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=en_US.UTF-8"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afroflix_tv -d afroflix_tv_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - afroflix-tv-network
+    restart: unless-stopped
+
+  # Backend API avec hot reload
+  backend:
+    image: afroflix-tv-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: afroflix-tv-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+      EMAIL_BRAND_NAME: ${EMAIL_BRAND_NAME:-AFROFLIX.TV}
+      EMAIL_NOREPLY: ${EMAIL_NOREPLY:-noreply@afroflix-tv.com}
+      EMAIL_INFO: ${EMAIL_INFO:-info@afroflix-tv.com}
+      EMAIL_ADMIN: ${EMAIL_ADMIN:-admin@afroflix-tv.com}
+      EMAIL_SUPPORT: ${EMAIL_SUPPORT:-support@afroflix-tv.com}
+      EMAIL_CONTACT: ${EMAIL_CONTACT:-contact@afroflix-tv.com}
+      EMAIL_CONTACT_RECIPIENTS: ${EMAIL_CONTACT_RECIPIENTS:-contact@afroflix-tv.com,support@afroflix-tv.com,admin@afroflix-tv.com,info@afroflix-tv.com}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: afroflix_tv_db
+      DB_USER: afroflix_tv
+      DB_PASSWORD: afroflix_tv123
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+      - ./backend/package.json:/app/package.json
+      - /app/node_modules
+    networks:
+      - afroflix-tv-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Frontend React avec hot reload
+  frontend:
+    image: afroflix-tv-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: afroflix-tv-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/package.json:/app/package.json
+      - /app/node_modules
+    networks:
+      - afroflix-tv-network
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
+
+  # pgAdmin pour gérer la base de données
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: afroflix-tv-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@afroflix-tv.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - afroflix-tv-network
+    restart: unless-stopped
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  afroflix-tv-network:
+    driver: bridge
