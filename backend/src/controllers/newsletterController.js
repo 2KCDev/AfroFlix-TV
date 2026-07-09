@@ -30,20 +30,21 @@ const subscribe = async (req, res) => {
 
     const subscriber = result.rows[0];
 
-    try {
-      await sendNewsletterConfirmation({
+    const emailResults = await Promise.allSettled([
+      sendNewsletterConfirmation({
         to: subscriber.email,
         unsubscribeToken: subscriber.unsubscribe_token,
-      });
-    } catch (emailErr) {
-      console.error('[email] newsletter confirmation failed:', emailErr.message);
-      return res.status(502).json({
-        error: 'Inscription enregistrée, mais l’email de confirmation n’a pas pu être envoyé.',
-      });
-    }
+      }),
+      sendNewsletterInternalNotification({ email: subscriber.email }),
+    ]);
 
-    sendNewsletterInternalNotification({ email: subscriber.email })
-      .catch((emailErr) => console.error('[email] newsletter internal notification failed:', emailErr.message));
+    const [confirmationResult, internalResult] = emailResults;
+    if (confirmationResult.status === 'rejected') {
+      console.error('[email] newsletter confirmation failed:', confirmationResult.reason?.message || confirmationResult.reason);
+    }
+    if (internalResult.status === 'rejected') {
+      console.error('[email] newsletter internal notification failed:', internalResult.reason?.message || internalResult.reason);
+    }
 
     res.status(201).json({
       message: 'Votre inscription aux actualités AFROFLIX.TV est confirmée.',

@@ -72,27 +72,55 @@ const assertUniqueFilmFields = async ({ slug, youtube_embed_url, excludeId = nul
   return 'Ce film contient déjà une valeur unique existante.';
 };
 
-const enrichFilms = async (films) => Promise.all(films.map(async (film) => {
-  const genresResult = await pool.query(
-    `SELECT g.id, g.name, g.slug FROM genres g
-     JOIN film_genres fg ON g.id = fg.genre_id
-     WHERE fg.film_id = $1`,
-    [film.id]
-  );
+const enrichFilms = async (films) => {
+  if (!films.length) return [];
 
-  const actorsResult = await pool.query(
-    `SELECT a.id, a.name, a.slug, fa.character_name FROM actors a
-     JOIN film_actors fa ON a.id = fa.actor_id
-     WHERE fa.film_id = $1`,
-    [film.id]
-  );
+  const filmIds = films.map((film) => film.id);
+  const [genresResult, actorsResult] = await Promise.all([
+    pool.query(
+      `SELECT fg.film_id, g.id, g.name, g.slug
+       FROM film_genres fg
+       JOIN genres g ON g.id = fg.genre_id
+       WHERE fg.film_id = ANY($1::int[])
+       ORDER BY g.name ASC`,
+      [filmIds]
+    ),
+    pool.query(
+      `SELECT fa.film_id, a.id, a.name, a.slug, fa.character_name
+       FROM film_actors fa
+       JOIN actors a ON a.id = fa.actor_id
+       WHERE fa.film_id = ANY($1::int[])
+       ORDER BY a.name ASC`,
+      [filmIds]
+    ),
+  ]);
 
-  return {
+  const genresByFilm = new Map();
+  const actorsByFilm = new Map();
+
+  for (const row of genresResult.rows) {
+    const genres = genresByFilm.get(row.film_id) || [];
+    genres.push({ id: row.id, name: row.name, slug: row.slug });
+    genresByFilm.set(row.film_id, genres);
+  }
+
+  for (const row of actorsResult.rows) {
+    const actors = actorsByFilm.get(row.film_id) || [];
+    actors.push({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      character_name: row.character_name,
+    });
+    actorsByFilm.set(row.film_id, actors);
+  }
+
+  return films.map((film) => ({
     ...film,
-    genres: genresResult.rows,
-    actors: actorsResult.rows
-  };
-}));
+    genres: genresByFilm.get(film.id) || [],
+    actors: actorsByFilm.get(film.id) || [],
+  }));
+};
 
 const normalizeActorIds = (actors = []) => [...new Set(
   actors
@@ -341,16 +369,7 @@ const getTrendingFilms = async (req, res) => {
       ['published', pageSize]
     );
 
-    const filmsEnriched = await Promise.all(result.rows.map(async (film) => {
-      const genresResult = await pool.query(
-        `SELECT g.id, g.name, g.slug FROM genres g
-         JOIN film_genres fg ON g.id = fg.genre_id
-         WHERE fg.film_id = $1`,
-        [film.id]
-      );
-      
-      return { ...film, genres: genresResult.rows };
-    }));
+    const filmsEnriched = await enrichFilms(result.rows);
 
     res.json(filmsEnriched);
   } catch (err) {

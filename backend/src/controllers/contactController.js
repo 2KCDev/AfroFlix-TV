@@ -39,20 +39,21 @@ const createContactMessage = async (req, res) => {
       ]
     );
 
-    try {
-      await sendContactNotification({ name, email, subject: subject.slice(0, 255), message });
-    } catch (emailErr) {
-      console.error('[email] contact notification failed:', emailErr.message);
-      return res.status(502).json({
-        error: 'Votre message est enregistré, mais la notification email interne n’a pas pu être envoyée. Veuillez réessayer dans quelques instants.',
-      });
+    const emailResults = await Promise.allSettled([
+      sendContactNotification({ name, email, subject: subject.slice(0, 255), message }),
+      sendContactConfirmation({ to: email, name, subject: subject.slice(0, 255) }),
+    ]);
+
+    const [notificationResult, confirmationResult] = emailResults;
+    if (notificationResult.status === 'rejected') {
+      console.error('[email] contact notification failed:', notificationResult.reason?.message || notificationResult.reason);
+    }
+    if (confirmationResult.status === 'rejected') {
+      console.error('[email] contact confirmation failed:', confirmationResult.reason?.message || confirmationResult.reason);
     }
 
-    sendContactConfirmation({ to: email, name, subject: subject.slice(0, 255) })
-      .catch((emailErr) => console.error('[email] contact confirmation failed:', emailErr.message));
-
     res.status(201).json({
-      message: 'Votre message a bien été envoyé.',
+      message: 'Votre message a bien été reçu.',
       contact: result.rows[0],
     });
   } catch (err) {

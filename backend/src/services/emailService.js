@@ -86,9 +86,11 @@ const normalizeRecipients = (value) => {
 };
 
 const hasUsableResendKey = () => {
-  const key = String(process.env.RESEND_API_KEY || process.env.RESEND_API_KEY_BACKEND || '').trim();
+  const key = getResendApiKey();
   return key.startsWith('re_') && !PLACEHOLDER_RESEND_KEY.test(key);
 };
+
+const getResendApiKey = () => String(process.env.RESEND_API_KEY || process.env.RESEND_API_KEY_BACKEND || '').trim();
 
 const getEmailDeliveryMode = () => {
   const configured = String(process.env.EMAIL_DELIVERY_MODE || '').trim().toLowerCase();
@@ -120,6 +122,11 @@ const sendEmail = async ({ from, to, subject, html, text, replyTo, cc, bcc }) =>
     return { skipped: true, mode: deliveryMode };
   }
 
+  const resendApiKey = getResendApiKey();
+  if (!hasUsableResendKey()) {
+    throw new Error('RESEND_API_KEY is missing or invalid while EMAIL_DELIVERY_MODE=resend.');
+  }
+
   const payload = {
     from,
     to: recipients,
@@ -135,7 +142,7 @@ const sendEmail = async ({ from, to, subject, html, text, replyTo, cc, bcc }) =>
   const response = await fetch(RESEND_ENDPOINT, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${String(process.env.RESEND_API_KEY || process.env.RESEND_API_KEY_BACKEND || '').trim()}`,
+      Authorization: `Bearer ${resendApiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
