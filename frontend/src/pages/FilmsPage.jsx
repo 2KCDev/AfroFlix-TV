@@ -77,13 +77,12 @@ const FilmsPage = () => {
 
   return (
     <div className="space-y-8">
-      <SEO
-        title={activeGenre ? `Films AfroFlix.TV ${activeGenre.name}` : 'Films AfroFlix.TV'}
-        description={
-          activeGenre?.description ||
-          'Catalogue de films AfroFlix.TV avec filtres par genre, année, popularité et notes.'
-        }
-      />
+      {activeGenre?.description && (
+        <SEO
+          title={`Films AfroFlix.TV ${activeGenre.name}`}
+          description={activeGenre.description}
+        />
+      )}
       <Breadcrumbs
         items={[
           { label: 'Films', to: '/films' },

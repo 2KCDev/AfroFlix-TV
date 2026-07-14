@@ -93,7 +93,7 @@ const ActorDetail = () => {
 
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-3">Biographie</h2>
-            <p className="text-gray-700 leading-relaxed">
+            <p className="text-justify text-gray-700 leading-relaxed">
               {actor.biography || 'Pas de biographie disponible'}
             </p>
           </div>

@@ -3,7 +3,6 @@ import { FiBarChart2, FiCheckSquare, FiFileText, FiMessageSquare, FiSettings, Fi
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import SEO from '../components/common/SEO';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import AdminContentManager from '../components/admin/AdminContentManager';
 import AdminModerationQueue from '../components/admin/AdminModerationQueue';
@@ -66,8 +65,6 @@ const AdminPanel = () => {
 
   return (
     <div className="space-y-8">
-      <SEO title="Administration" description="Espace interne AFROFLIX.TV non indexable." />
-
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-gray-900">Administration AFROFLIX.TV</h1>

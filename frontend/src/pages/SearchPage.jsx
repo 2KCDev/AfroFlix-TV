@@ -4,7 +4,6 @@ import { useSearchParams } from 'react-router-dom';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FilmCard from '../components/cards/FilmCard';
-import SEO from '../components/common/SEO';
 import SearchSuggest from '../components/common/SearchSuggest';
 import { api } from '../services/api';
 
@@ -82,10 +81,6 @@ const SearchPage = () => {
 
   return (
     <div className="space-y-8">
-      <SEO
-        title="Recherche AfroFlix.TV"
-        description="Rechercher un film, un acteur, un genre ou une année dans la base AfroFlix.TV."
-      />
       <Breadcrumbs items={[{ label: 'Recherche' }]} />
 
       <div>

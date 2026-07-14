@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { FiEdit3 } from 'react-icons/fi';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import SEO from '../components/common/SEO';
 import { api } from '../services/api';
 import { formatDate, truncateText } from '../utils/content';
 
@@ -29,10 +28,6 @@ const ReviewsPage = () => {
 
   return (
     <div className="space-y-8">
-      <SEO
-        title="Critiques et analyses AfroFlix.TV"
-        description="Critiques, analyses et sélections éditoriales pour mieux comprendre les films AfroFlix.TV."
-      />
       <Breadcrumbs items={[{ label: 'Critiques' }]} />
 
       <div>

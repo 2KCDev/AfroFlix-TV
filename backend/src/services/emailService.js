@@ -1,5 +1,10 @@
+const pool = require('../db/pool');
+
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const PLACEHOLDER_RESEND_KEY = /^re_x+$/i;
+const EMAIL_QUEUE_INTERVAL_MS = Number(process.env.EMAIL_QUEUE_INTERVAL_MS || 60_000);
+const EMAIL_QUEUE_BATCH_SIZE = Number(process.env.EMAIL_QUEUE_BATCH_SIZE || 10);
+const EMAIL_QUEUE_MAX_ATTEMPTS = Number(process.env.EMAIL_QUEUE_MAX_ATTEMPTS || 8);
 
 const EMAILS = {
   noreply: process.env.EMAIL_NOREPLY || 'noreply@afroflix-tv.com',
@@ -30,7 +35,7 @@ const CONTACT_RECIPIENTS = parseEmailList(process.env.EMAIL_CONTACT_RECIPIENTS, 
 const INTERNAL_RECIPIENTS = parseEmailList(process.env.EMAIL_INTERNAL_RECIPIENTS, CONTACT_RECIPIENTS);
 
 const getFrontendUrl = () => (
-  process.env.FRONTEND_URL || process.env.APP_URL || 'https://afroflix-tv.com'
+  process.env.FRONTEND_URL || process.env.APP_URL || 'https://www.afroflix-tv.com'
 ).replace(/\/$/, '');
 
 const escapeHtml = (value = '') =>
@@ -96,6 +101,38 @@ const getEmailDeliveryMode = () => {
   const configured = String(process.env.EMAIL_DELIVERY_MODE || '').trim().toLowerCase();
   if (['resend', 'log', 'disabled'].includes(configured)) return configured;
   return hasUsableResendKey() ? 'resend' : 'log';
+};
+
+const getEmailStatus = () => {
+  const deliveryMode = getEmailDeliveryMode();
+  const resendApiKey = getResendApiKey();
+  const warnings = [];
+
+  if (deliveryMode === 'resend' && !hasUsableResendKey()) {
+    warnings.push('RESEND_API_KEY est manquante ou invalide alors que EMAIL_DELIVERY_MODE=resend.');
+  }
+
+  if (process.env.NODE_ENV === 'production' && deliveryMode !== 'resend') {
+    warnings.push('Le mode email de production devrait être "resend" pour envoyer réellement les messages.');
+  }
+
+  if (process.env.NODE_ENV === 'production' && getFrontendUrl().includes('localhost')) {
+    warnings.push('FRONTEND_URL pointe vers localhost en production; les liens de réinitialisation seront invalides.');
+  }
+
+  return {
+    delivery_mode: deliveryMode,
+    provider: deliveryMode === 'resend' ? 'resend' : null,
+    can_attempt_delivery: deliveryMode === 'log' || (deliveryMode === 'resend' && hasUsableResendKey()),
+    resend_key_configured: Boolean(resendApiKey),
+    resend_key_usable: hasUsableResendKey(),
+    frontend_url: getFrontendUrl(),
+    brand_name: brandName,
+    senders: EMAILS,
+    contact_recipients: CONTACT_RECIPIENTS,
+    internal_recipients: INTERNAL_RECIPIENTS,
+    warnings,
+  };
 };
 
 const sendEmail = async ({ from, to, subject, html, text, replyTo, cc, bcc }) => {
@@ -164,6 +201,147 @@ const sendEmail = async ({ from, to, subject, html, text, replyTo, cc, bcc }) =>
   return data;
 };
 
+const getProviderMessageId = (result) => result?.id || result?.data?.id || null;
+
+const getNextAttemptAt = (attempts) => {
+  const delayMinutes = Math.min(180, Math.max(1, 2 ** Math.max(0, attempts - 1)));
+  return new Date(Date.now() + delayMinutes * 60 * 1000);
+};
+
+const enqueueEmail = async (type, payload, error) => {
+  const result = await pool.query(
+    `INSERT INTO email_outbox (type, payload, attempts, max_attempts, last_error, next_attempt_at)
+     VALUES ($1, $2, 0, $3, $4, $5)
+     RETURNING id, status, attempts, next_attempt_at`,
+    [
+      type,
+      JSON.stringify(payload),
+      EMAIL_QUEUE_MAX_ATTEMPTS,
+      error?.message || String(error || ''),
+      getNextAttemptAt(1),
+    ]
+  );
+
+  console.warn('[email] queued for retry:', {
+    id: result.rows[0].id,
+    type,
+    to: normalizeRecipients(payload.to),
+    subject: payload.subject,
+    reason: error?.message || String(error || ''),
+  });
+
+  return result.rows[0];
+};
+
+const sendEmailWithQueue = async (type, payload) => {
+  try {
+    const result = await sendEmail(payload);
+    return {
+      ...result,
+      queued: false,
+      mode: result.mode || getEmailDeliveryMode(),
+      id: getProviderMessageId(result),
+    };
+  } catch (err) {
+    const queued = await enqueueEmail(type, payload, err);
+    return {
+      queued: true,
+      mode: getEmailDeliveryMode(),
+      queue_id: queued.id,
+      next_attempt_at: queued.next_attempt_at,
+      error: err.message,
+    };
+  }
+};
+
+const processEmailQueueBatch = async (limit = EMAIL_QUEUE_BATCH_SIZE) => {
+  const client = await pool.connect();
+  let items = [];
+
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `SELECT id, type, payload, attempts, max_attempts
+       FROM email_outbox
+       WHERE status IN ('pending', 'failed')
+         AND next_attempt_at <= CURRENT_TIMESTAMP
+         AND attempts < max_attempts
+       ORDER BY created_at ASC
+       LIMIT $1
+       FOR UPDATE SKIP LOCKED`,
+      [limit]
+    );
+    items = result.rows;
+
+    if (items.length) {
+      await client.query(
+        `UPDATE email_outbox
+         SET status = 'sending', updated_at = CURRENT_TIMESTAMP
+         WHERE id = ANY($1::int[])`,
+        [items.map((item) => item.id)]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  for (const item of items) {
+    try {
+      const payload = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+      const result = await sendEmail(payload);
+      await pool.query(
+        `UPDATE email_outbox
+         SET status = 'sent',
+             attempts = attempts + 1,
+             provider_message_id = $2,
+             last_error = NULL,
+             sent_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [item.id, getProviderMessageId(result)]
+      );
+      console.info('[email] queued email sent:', { id: item.id, type: item.type });
+    } catch (err) {
+      const attempts = Number(item.attempts || 0) + 1;
+      const exhausted = attempts >= Number(item.max_attempts || EMAIL_QUEUE_MAX_ATTEMPTS);
+      await pool.query(
+        `UPDATE email_outbox
+         SET status = 'failed',
+             attempts = $2,
+             last_error = $3,
+             next_attempt_at = $4,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [item.id, attempts, err.message, exhausted ? new Date(Date.now() + 24 * 60 * 60 * 1000) : getNextAttemptAt(attempts + 1)]
+      );
+      console.error('[email] queued email failed:', { id: item.id, type: item.type, attempts, error: err.message });
+    }
+  }
+
+  return { processed: items.length };
+};
+
+let queueWorkerStarted = false;
+const startEmailQueueWorker = () => {
+  if (queueWorkerStarted || process.env.EMAIL_QUEUE_WORKER === 'disabled') return;
+  queueWorkerStarted = true;
+
+  const run = () => {
+    processEmailQueueBatch().catch((err) => {
+      console.error('[email] queue worker failed:', err.message);
+    });
+  };
+
+  setTimeout(run, 5_000);
+  setInterval(run, EMAIL_QUEUE_INTERVAL_MS);
+  console.info('[email] queue worker started');
+};
+
 const sendPasswordResetEmail = ({ to, username, resetUrl }) => {
   const html = renderLayout({
     title: 'Réinitialisation de votre mot de passe',
@@ -177,7 +355,7 @@ const sendPasswordResetEmail = ({ to, username, resetUrl }) => {
     `,
   });
 
-  return sendEmail({
+  return sendEmailWithQueue('password_reset', {
     from: `${brandName} <${EMAILS.noreply}>`,
     to,
     subject: `${brandName} - Réinitialisation de mot de passe`,
@@ -193,7 +371,7 @@ const sendWelcomeEmail = ({ to, username }) => {
     children: '<p style="margin:0;font-size:15px;line-height:1.6;color:#374151;">Vous pouvez maintenant profiter de vos favoris, notes et commentaires sur la plateforme.</p>',
   });
 
-  return sendEmail({
+  return sendEmailWithQueue('welcome', {
     from: `${brandName} <${EMAILS.noreply}>`,
     to,
     subject: `Bienvenue sur ${brandName}`,
@@ -209,7 +387,7 @@ const sendStaffAccountEmail = ({ to, username, role }) => {
     children: `<p style="margin:0;font-size:15px;line-height:1.6;color:#374151;">Connectez-vous avec le mot de passe transmis par l'administrateur. La récupération automatique de mot de passe reste désactivée pour les comptes éditeur et modérateur.</p>`,
   });
 
-  return sendEmail({
+  return sendEmailWithQueue('staff_account', {
     from: `${brandName} Admin <${EMAILS.admin}>`,
     to,
     subject: `${brandName} - Accès équipe`,
@@ -231,7 +409,7 @@ const sendContactNotification = ({ name, email, subject, message }) => {
     `,
   });
 
-  return sendEmail({
+  return sendEmailWithQueue('contact_notification', {
     from: `${brandName} Contact <${EMAILS.contact}>`,
     to: recipients,
     replyTo: email,
@@ -252,7 +430,7 @@ const sendContactConfirmation = ({ to, name, subject }) => {
     `,
   });
 
-  return sendEmail({
+  return sendEmailWithQueue('contact_confirmation', {
     from: `${brandName} Support <${EMAILS.support}>`,
     to,
     replyTo: EMAILS.support,
@@ -273,7 +451,7 @@ const sendNewsletterConfirmation = ({ to, unsubscribeToken }) => {
     `,
   });
 
-  return sendEmail({
+  return sendEmailWithQueue('newsletter_confirmation', {
     from: `${brandName} <${EMAILS.noreply}>`,
     to,
     subject: `${brandName} - Inscription aux actualités`,
@@ -282,7 +460,7 @@ const sendNewsletterConfirmation = ({ to, unsubscribeToken }) => {
   });
 };
 
-const sendNewsletterInternalNotification = ({ email }) => sendEmail({
+const sendNewsletterInternalNotification = ({ email }) => sendEmailWithQueue('newsletter_internal', {
   from: `${brandName} Newsletter <${EMAILS.noreply}>`,
   to: INTERNAL_RECIPIENTS,
   subject: `[Newsletter ${brandName}] Nouvel abonné`,
@@ -308,7 +486,7 @@ const sendArticleNotificationEmail = ({ to, title, excerpt, url, unsubscribeToke
     `,
   });
 
-  return sendEmail({
+  return sendEmailWithQueue('article_notification', {
     from: `${brandName} Actualités <${EMAILS.info}>`,
     to,
     subject: `${brandName} - ${title}`,
@@ -317,16 +495,37 @@ const sendArticleNotificationEmail = ({ to, title, excerpt, url, unsubscribeToke
   });
 };
 
+const sendDiagnosticEmail = ({ to }) => {
+  const html = renderLayout({
+    title: 'Test email AFROFLIX.TV',
+    intro: `Cet email confirme que la configuration d'envoi ${brandName} fonctionne.`,
+    children: `<p style="margin:0;font-size:15px;line-height:1.6;color:#374151;">Mode: ${escapeHtml(getEmailDeliveryMode())}. Date: ${escapeHtml(new Date().toISOString())}</p>`,
+  });
+
+  return sendEmailWithQueue('diagnostic', {
+    from: `${brandName} Support <${EMAILS.support}>`,
+    to,
+    replyTo: EMAILS.support,
+    subject: `${brandName} - Test email`,
+    html,
+    text: `Test email ${brandName}. Mode: ${getEmailDeliveryMode()}. Date: ${new Date().toISOString()}`,
+  });
+};
+
 module.exports = {
   CONTACT_RECIPIENTS,
   EMAILS,
   INTERNAL_RECIPIENTS,
+  getEmailStatus,
+  processEmailQueueBatch,
   sendArticleNotificationEmail,
   sendContactConfirmation,
   sendContactNotification,
+  sendDiagnosticEmail,
   sendNewsletterConfirmation,
   sendNewsletterInternalNotification,
   sendPasswordResetEmail,
   sendStaffAccountEmail,
   sendWelcomeEmail,
+  startEmailQueueWorker,
 };

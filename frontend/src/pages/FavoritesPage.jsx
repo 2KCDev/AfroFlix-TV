@@ -4,7 +4,6 @@ import { FiHeart } from 'react-icons/fi';
 import FilmCard from '../components/cards/FilmCard';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import SEO from '../components/common/SEO';
 import { api } from '../services/api';
 
 const FavoritesPage = () => {
@@ -32,10 +31,6 @@ const FavoritesPage = () => {
 
   return (
     <div className="space-y-8">
-      <SEO
-        title="Mes films favoris"
-        description="Retrouvez les films AfroFlix.TV sauvegardés dans votre espace personnel."
-      />
       <Breadcrumbs items={[{ label: 'Favoris' }]} />
 
       <div>
@@ -70,4 +65,3 @@ const FavoritesPage = () => {
 };
 
 export default FavoritesPage;
-

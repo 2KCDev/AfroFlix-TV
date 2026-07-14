@@ -4,7 +4,6 @@ import ActorGrid from '../components/actors/ActorGrid';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Pagination from '../components/common/Pagination';
-import SEO from '../components/common/SEO';
 import SearchSuggest from '../components/common/SearchSuggest';
 import { useActors } from '../hooks/useFilms';
 
@@ -34,10 +33,6 @@ const ActorsPage = () => {
 
   return (
     <div className="space-y-8">
-      <SEO
-        title="Acteurs AfroFlix.TV"
-        description="Profils, biographies et filmographies des acteurs et actrices du cinéma AfroFlix.TV."
-      />
       <Breadcrumbs items={[{ label: 'Acteurs' }]} />
 
       <div className="mb-8">

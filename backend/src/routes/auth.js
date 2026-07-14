@@ -26,7 +26,11 @@ const signToken = (user) => jwt.sign(
   { expiresIn: '7d' }
 );
 
-const getFrontendUrl = () => (process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+const getFrontendUrl = () => (
+  process.env.FRONTEND_URL
+  || process.env.APP_URL
+  || (process.env.NODE_ENV === 'production' ? 'https://www.afroflix-tv.com' : 'http://localhost:3000')
+).replace(/\/$/, '');
 
 const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 

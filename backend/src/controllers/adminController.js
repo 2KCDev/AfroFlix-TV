@@ -1,6 +1,11 @@
 const pool = require('../db/pool');
 const bcrypt = require('bcryptjs');
-const { sendStaffAccountEmail } = require('../services/emailService');
+const {
+  getEmailStatus,
+  sendDiagnosticEmail,
+  sendStaffAccountEmail,
+} = require('../services/emailService');
+const { isValidEmail, normalizeEmail } = require('../utils/validation');
 
 const fetchGoogleJson = async (url, accessToken, options = {}) => {
   const response = await fetch(url, {
@@ -93,6 +98,59 @@ const getGoogleInsights = async () => {
       connected: false,
       message: err.message
     };
+  }
+};
+
+const getEmailDiagnostics = async (req, res) => {
+  res.json(getEmailStatus());
+};
+
+const sendEmailDiagnostic = async (req, res) => {
+  try {
+    const to = normalizeEmail(req.body.to || req.user.email);
+    if (!isValidEmail(to)) {
+      return res.status(400).json({ error: 'Adresse email de test invalide.' });
+    }
+
+    const result = await sendDiagnosticEmail({ to });
+    res.json({
+      message: 'Email de test traité.',
+      delivery: {
+        mode: result.mode || getEmailStatus().delivery_mode,
+        skipped: Boolean(result.skipped),
+        id: result.id || result.data?.id || null,
+      },
+    });
+  } catch (err) {
+    console.error('[email] diagnostic failed:', err);
+    res.status(500).json({ error: err.message || 'Impossible d’envoyer l’email de test.' });
+  }
+};
+
+const getEmailQueue = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id,
+              type,
+              status,
+              attempts,
+              max_attempts,
+              last_error,
+              provider_message_id,
+              next_attempt_at,
+              sent_at,
+              created_at,
+              payload->>'subject' AS subject,
+              payload->'to' AS recipients
+       FROM email_outbox
+       ORDER BY created_at DESC
+       LIMIT 50`
+    );
+
+    res.json({ emails: result.rows });
+  } catch (err) {
+    console.error('[email] queue read failed:', err);
+    res.status(500).json({ error: 'Impossible de lire la file email.' });
   }
 };
 
@@ -522,5 +580,8 @@ module.exports = {
   updateOwnProfile,
   updateUserRole,
   deleteUser,
-  getDashboardStats
+  getDashboardStats,
+  getEmailDiagnostics,
+  getEmailQueue,
+  sendEmailDiagnostic
 };

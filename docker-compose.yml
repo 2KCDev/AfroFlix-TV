@@ -30,8 +30,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-afroflix_tv}:${POSTGRES_PASSWORD:-afroflix_tv123}@postgres:5432/${POSTGRES_DB:-afroflix_tv_db}
       PORT: 5000
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set for deployment}
-      FRONTEND_URL: ${FRONTEND_URL:-https://afroflix-tv.com}
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://afroflix-tv.com}
+      FRONTEND_URL: ${FRONTEND_URL:-https://www.afroflix-tv.com}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://www.afroflix-tv.com}
       EMAIL_DELIVERY_MODE: ${EMAIL_DELIVERY_MODE:-resend}
       RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY must be set for email delivery}
       EMAIL_BRAND_NAME: ${EMAIL_BRAND_NAME:-AFROFLIX.TV}

@@ -12,7 +12,7 @@ const articleSlugify = (value = '') => value
   .replace(/^-+|-+$/g, '');
 
 const getFrontendUrl = () => (
-  process.env.FRONTEND_URL || process.env.APP_URL || 'https://afroflix-tv.com'
+  process.env.FRONTEND_URL || process.env.APP_URL || 'https://www.afroflix-tv.com'
 ).replace(/\/$/, '');
 
 const makeExcerpt = (content = '') => String(content)

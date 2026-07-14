@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { FiAward, FiEye, FiStar, FiTrendingUp } from 'react-icons/fi';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import SEO from '../components/common/SEO';
 import { api } from '../services/api';
 
 const RankingRow = ({ film, index, metric }) => (
@@ -77,10 +76,6 @@ const RankingsPage = () => {
 
   return (
     <div className="space-y-8">
-      <SEO
-        title="Classements AfroFlix.TV"
-        description="Top films AfroFlix.TV par vues, notes et tendances pour découvrir les titres les plus populaires."
-      />
       <Breadcrumbs items={[{ label: 'Classements' }]} />
 
       <div>
@@ -118,4 +113,3 @@ const RankingsPage = () => {
 };
 
 export default RankingsPage;
-

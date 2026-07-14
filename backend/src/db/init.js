@@ -89,6 +89,29 @@ const ensureDatabaseReady = async () => {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_outbox (
+      id SERIAL PRIMARY KEY,
+      type VARCHAR(80) NOT NULL,
+      status VARCHAR(30) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'sending', 'sent', 'failed')),
+      payload JSONB NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 8,
+      last_error TEXT,
+      provider_message_id VARCHAR(255),
+      next_attempt_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      sent_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_email_outbox_status_next_attempt
+    ON email_outbox(status, next_attempt_at, created_at)
+  `);
+
+  await pool.query(`
     DO $$
     BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_email_format_chk') THEN

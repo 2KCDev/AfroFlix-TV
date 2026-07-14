@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import ContactForm from '../components/forms/ContactForm';
-import SEO from '../components/common/SEO';
 
 const LegalPage = ({ type = 'about' }) => {
   useEffect(() => {
@@ -139,11 +138,6 @@ const LegalPage = ({ type = 'about' }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <SEO
-        title={page.title}
-        description={`${page.title} de la plateforme AFROFLIX.TV, référence francophone du cinéma africain.`}
-      />
-
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">{page.title}</h1>
         <p className="text-gray-600">

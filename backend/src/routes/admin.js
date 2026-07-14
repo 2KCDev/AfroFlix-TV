@@ -8,6 +8,9 @@ router.use(authMiddleware);
 
 // Dashboard
 router.get('/stats', editorOrAdmin, adminController.getDashboardStats);
+router.get('/email/status', adminOnly, adminController.getEmailDiagnostics);
+router.get('/email/queue', adminOnly, adminController.getEmailQueue);
+router.post('/email/test', adminOnly, adminController.sendEmailDiagnostic);
 
 // User management
 router.get('/users', adminOnly, adminController.getAllUsers);

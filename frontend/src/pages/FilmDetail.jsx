@@ -782,7 +782,7 @@ const FilmDetail = () => {
           {/* Description */}
           <div>
             <h3 className="font-bold text-gray-900 mb-2">Synopsis</h3>
-            <p className="break-words text-gray-700 leading-relaxed">{film.description}</p>
+            <p className="break-words text-justify text-gray-700 leading-relaxed">{film.description}</p>
           </div>
 
           <div>
@@ -812,9 +812,6 @@ const FilmDetail = () => {
             </div>
           </div>
 
-          <div className="lg:hidden">
-            {similarFilmsSection}
-          </div>
         </div>
       </div>
 
@@ -836,6 +833,10 @@ const FilmDetail = () => {
           </div>
         </div>
       )}
+
+      <div className="lg:hidden">
+        {similarFilmsSection}
+      </div>
 
     </div>
   );

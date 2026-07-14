@@ -66,7 +66,6 @@ const BlogPage = () => {
   if (slug && !article) {
     return (
       <div className="max-w-3xl mx-auto rounded-lg border border-gray-200 bg-white p-10 text-center">
-        <SEO title="Article non trouvé" description="Article AfroFlix.TV introuvable." />
         <h1 className="text-3xl font-bold text-gray-900 mb-3">Article non trouvé</h1>
         <p className="text-gray-600 mb-6">
           Cet article n'existe pas ou n'est plus publié.
@@ -132,7 +131,7 @@ const BlogPage = () => {
 
           <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed space-y-4">
             {article.content?.split('\n').map((paragraph, idx) => (
-              <p key={idx}>{paragraph}</p>
+              <p key={idx} className="text-justify">{paragraph}</p>
             ))}
           </div>
 
@@ -176,10 +175,6 @@ const BlogPage = () => {
 
   return (
     <div className="space-y-8">
-      <SEO
-        title="Actualités AfroFlix.TV"
-        description="Actualités, analyses, classements et conseils sur le cinéma AfroFlix.TV."
-      />
       <Breadcrumbs items={[{ label: 'Actualités' }]} />
 
       <div>
