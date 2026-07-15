@@ -28,7 +28,6 @@ const SearchSuggest = ({
   placeholder = 'Rechercher par mots clés...',
   autoFocus = false,
   inputClassName = '',
-  buttonLabel = 'Chercher',
   autoSubmit = false,
 }) => {
   const navigate = useNavigate();
@@ -79,7 +78,7 @@ const SearchSuggest = ({
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-row gap-2 sm:gap-3">
+    <form onSubmit={submit} className="w-full">
       <div className="relative min-w-0 flex-grow">
         <input
           type="search"
@@ -109,13 +108,6 @@ const SearchSuggest = ({
           </div>
         )}
       </div>
-      <button
-        type="submit"
-        className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-red-600 px-3 py-3 font-semibold text-white transition hover:bg-red-700 sm:px-6"
-      >
-        <FiSearch size={18} />
-        {buttonLabel}
-      </button>
     </form>
   );
 };

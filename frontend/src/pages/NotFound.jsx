@@ -22,7 +22,6 @@ const NotFound = () => {
           value={searchTerm}
           onChange={setSearchTerm}
           placeholder="Rechercher un film ou un acteur"
-          buttonLabel="Rechercher"
         />
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

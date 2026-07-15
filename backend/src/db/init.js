@@ -150,6 +150,14 @@ const ensureDatabaseReady = async () => {
           CHECK (status IN ('published', 'draft', 'archived')) NOT VALID;
       END IF;
 
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'genres_status_chk') THEN
+        ALTER TABLE genres
+          ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'published';
+        ALTER TABLE genres
+          ADD CONSTRAINT genres_status_chk
+          CHECK (status IN ('published', 'draft', 'archived')) NOT VALID;
+      END IF;
+
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'comments_email_format_chk') THEN
         ALTER TABLE comments
           ADD CONSTRAINT comments_email_format_chk

@@ -1,10 +1,27 @@
 const pool = require('../db/pool');
 
+let genreManagementMigration;
+
+const ensureGenreManagementColumns = () => {
+  if (!genreManagementMigration) {
+    genreManagementMigration = pool.query(`
+      ALTER TABLE genres
+        ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'published';
+      CREATE INDEX IF NOT EXISTS idx_genres_status_name ON genres(status, name);
+    `);
+  }
+  return genreManagementMigration;
+};
+
 // GET all genres
 const getAllGenres = async (req, res) => {
   try {
+    await ensureGenreManagementColumns();
     const result = await pool.query(
-      'SELECT id, name, slug, description FROM genres ORDER BY name',
+      `SELECT id, name, slug, description, status
+       FROM genres
+       WHERE COALESCE(status, 'published') = 'published'
+       ORDER BY name`,
       []
     );
 
@@ -15,15 +32,37 @@ const getAllGenres = async (req, res) => {
   }
 };
 
+const getManageableGenres = async (req, res) => {
+  try {
+    await ensureGenreManagementColumns();
+    const result = await pool.query(
+      `SELECT id, name, slug, description, COALESCE(status, 'published') AS status
+       FROM genres
+       ORDER BY name`,
+      []
+    );
+
+    res.json({ genres: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // GET films by genre with pagination
 const getFilmsByGenre = async (req, res) => {
   try {
+    await ensureGenreManagementColumns();
     const { slug } = req.params;
     const { page = 1, limit = 12, sortBy = 'latest' } = req.query;
     const offset = (page - 1) * limit;
 
     // Get genre
-    const genreResult = await pool.query('SELECT * FROM genres WHERE slug = $1', [slug]);
+    const genreResult = await pool.query(
+      `SELECT * FROM genres
+       WHERE slug = $1 AND COALESCE(status, 'published') = 'published'`,
+      [slug]
+    );
     if (!genreResult.rows.length) {
       return res.status(404).json({ error: 'Genre not found' });
     }
@@ -96,6 +135,7 @@ const getFilmsByGenre = async (req, res) => {
 // CREATE genre (admin only)
 const createGenre = async (req, res) => {
   try {
+    await ensureGenreManagementColumns();
     const { name, description } = req.body;
 
     if (!name) {
@@ -122,6 +162,7 @@ const createGenre = async (req, res) => {
 // UPDATE genre (admin only)
 const updateGenre = async (req, res) => {
   try {
+    await ensureGenreManagementColumns();
     const { id } = req.params;
     const { name, description } = req.body;
 
@@ -150,10 +191,14 @@ const updateGenre = async (req, res) => {
 // DELETE genre (admin only)
 const deleteGenre = async (req, res) => {
   try {
+    await ensureGenreManagementColumns();
     const { id } = req.params;
 
     const result = await pool.query(
-      'DELETE FROM genres WHERE id = $1 RETURNING *',
+      `UPDATE genres
+       SET status = 'archived'
+       WHERE id = $1
+       RETURNING *`,
       [id]
     );
 
@@ -161,7 +206,31 @@ const deleteGenre = async (req, res) => {
       return res.status(404).json({ error: 'Genre not found' });
     }
 
-    res.json({ message: 'Genre deleted successfully' });
+    res.json({ message: 'Genre archived successfully', genre: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const restoreGenre = async (req, res) => {
+  try {
+    await ensureGenreManagementColumns();
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `UPDATE genres
+       SET status = 'published'
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'Genre not found' });
+    }
+
+    res.json({ message: 'Genre restored successfully', genre: result.rows[0] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -170,8 +239,10 @@ const deleteGenre = async (req, res) => {
 
 module.exports = {
   getAllGenres,
+  getManageableGenres,
   getFilmsByGenre,
   createGenre,
   updateGenre,
-  deleteGenre
+  deleteGenre,
+  restoreGenre
 };

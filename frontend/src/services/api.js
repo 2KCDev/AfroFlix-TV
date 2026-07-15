@@ -162,8 +162,12 @@ export const api = {
   adminStats: () => request('/admin/stats'),
   adminFilms: (params = {}) =>
     request(`/films/manage/list${queryString(params)}`),
+  adminActors: (params = {}) =>
+    request(`/actors/manage/list${queryString(params)}`),
   adminArticles: (params = {}) =>
     request(`/articles/manage/list${queryString(params)}`),
+  adminGenres: (params = {}) =>
+    request(`/genres/manage/list${queryString(params)}`),
   adminUsers: (params = {}) =>
     request(`/admin/users${queryString(params)}`),
   updateUserRole: (userId, role) =>
@@ -214,6 +218,11 @@ export const api = {
     }),
   deleteFilm: (filmId) =>
     request(`/films/${filmId}`, { method: 'DELETE' }),
+  restoreFilm: (filmId) =>
+    request(`/films/${filmId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'published' }),
+    }),
   createActor: (payload) =>
     request('/actors', {
       method: 'POST',
@@ -226,6 +235,8 @@ export const api = {
     }),
   deleteActor: (actorId) =>
     request(`/actors/${actorId}`, { method: 'DELETE' }),
+  restoreActor: (actorId) =>
+    request(`/actors/${actorId}/restore`, { method: 'PUT' }),
   createArticle: (payload) =>
     request('/articles', {
       method: 'POST',
@@ -238,6 +249,11 @@ export const api = {
     }),
   deleteArticle: (articleId) =>
     request(`/articles/${articleId}`, { method: 'DELETE' }),
+  restoreArticle: (articleId) =>
+    request(`/articles/${articleId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'published' }),
+    }),
   articleCategories: () => request('/articles/categories', { cacheTtl: 300000 }),
   contact: (payload) =>
     request('/contact', {
@@ -261,6 +277,8 @@ export const api = {
     }),
   deleteGenre: (genreId) =>
     request(`/genres/${genreId}`, { method: 'DELETE' }),
+  restoreGenre: (genreId) =>
+    request(`/genres/${genreId}/restore`, { method: 'PUT' }),
 };
 
 export { getToken, setToken, removeToken };

@@ -99,7 +99,6 @@ const SearchPage = () => {
           placeholder="Chercher un film, un acteur, un article..."
           inputClassName="text-lg"
           autoFocus
-          buttonLabel="Rechercher"
         />
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <label className="block">

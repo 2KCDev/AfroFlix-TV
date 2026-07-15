@@ -443,11 +443,6 @@ const FilmDetail = () => {
       {submittingRating && (
         <p className="mt-3 text-sm font-semibold text-orange-700">Enregistrement de votre note...</p>
       )}
-      {hasUserRated && (
-        <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700">
-          Merci, votre note est bloquée pour éviter les votes multiples.
-        </p>
-      )}
     </section>
   );
 

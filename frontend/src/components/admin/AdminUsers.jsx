@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FiEdit3, FiPlus, FiRefreshCw, FiSave, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { api } from '../../services/api';
@@ -19,8 +19,8 @@ const UserTableFilters = ({
       Recherche d'utilisateurs
     </h4>
     <div className="space-y-3">
-      <div className="flex flex-row gap-2 sm:gap-3">
-        <label className="block min-w-0 flex-grow">
+      <div>
+        <label className="block min-w-0">
           <span className="sr-only">Mots clés</span>
           <input
             type="search"
@@ -30,13 +30,6 @@ const UserTableFilters = ({
             className="w-full rounded-lg border-2 border-red-600 px-4 py-3 outline-none focus:ring-2 focus:ring-red-500"
           />
         </label>
-        <button
-          type="submit"
-          className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-red-600 px-3 py-3 font-semibold text-white transition hover:bg-red-700 sm:px-6"
-        >
-          <FiSearch size={18} />
-          <span>Rechercher</span>
-        </button>
       </div>
       <label className="block">
         <span className="block text-sm font-semibold text-gray-700 mb-1">Rôle</span>
@@ -67,6 +60,7 @@ const AdminUsers = () => {
     role: 'editor',
     password: '',
   });
+  const formRef = useRef(null);
 
   const load = async () => {
     setLoading(true);
@@ -124,6 +118,10 @@ const AdminUsers = () => {
       role: user.role || 'user',
       password: '',
     });
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      formRef.current?.querySelector('input, select, textarea')?.focus({ preventScroll: true });
+    }, 0);
   };
 
   const submitUser = async (event) => {
@@ -178,7 +176,7 @@ const AdminUsers = () => {
 
       {message && <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">{message}</div>}
 
-      <form onSubmit={submitUser} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <form ref={formRef} onSubmit={submitUser} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
         <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-gray-900">
           {editingUser ? <FiEdit3 className="text-red-600" /> : <FiPlus className="text-red-600" />}
           {editingUser ? 'Modifier un compte' : 'Ajouter un éditeur ou modérateur'}

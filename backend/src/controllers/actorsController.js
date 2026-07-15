@@ -28,6 +28,56 @@ const assertUniqueActorName = async ({ name, excludeId = null }) => {
   return result.rows.length ? 'Un acteur avec ce nom existe déjà.' : null;
 };
 
+// GET manageable actors for admin/editor spaces.
+const getManageableActors = async (req, res) => {
+  try {
+    await ensureActorManagementColumns();
+    const { page = 1, limit = 100, status, search } = req.query;
+    const currentPage = Math.max(parseInt(page, 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 100);
+    const offset = (currentPage - 1) * pageSize;
+    const params = [];
+    let paramIndex = 1;
+    let where = 'WHERE 1 = 1';
+
+    if (req.user.role === 'editor') {
+      where += ` AND created_by = $${paramIndex++}`;
+      params.push(req.user.id);
+    }
+
+    if (status) {
+      where += ` AND COALESCE(status, 'published') = $${paramIndex++}`;
+      params.push(status);
+    }
+
+    if (search && search.trim().length >= 2) {
+      where += ` AND name ILIKE $${paramIndex++}`;
+      params.push(`%${search.trim()}%`);
+    }
+
+    const countResult = await pool.query(`SELECT COUNT(*) FROM actors ${where}`, params);
+    const result = await pool.query(
+      `SELECT * FROM actors ${where}
+       ORDER BY name ASC
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, pageSize, offset]
+    );
+
+    res.json({
+      actors: result.rows,
+      pagination: {
+        total: parseInt(countResult.rows[0].count),
+        page: currentPage,
+        limit: pageSize,
+        pages: Math.ceil(parseInt(countResult.rows[0].count) / pageSize)
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // GET all actors with pagination
 const getAllActors = async (req, res) => {
   try {
@@ -257,10 +307,42 @@ const deleteActor = async (req, res) => {
   }
 };
 
+const restoreActor = async (req, res) => {
+  try {
+    await ensureActorManagementColumns();
+    const { id } = req.params;
+
+    const params = ['published', id];
+    let query = 'UPDATE actors SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2';
+    if (req.user.role === 'editor') {
+      params.push(req.user.id);
+      query += ' AND created_by = $3';
+    }
+    query += ' RETURNING *';
+
+    const result = await pool.query(query, params);
+
+    if (!result.rows.length) {
+      return res.status(req.user.role === 'editor' ? 403 : 404).json({
+        error: req.user.role === 'editor'
+          ? 'Access denied. Editors can only restore their own actors'
+          : 'Actor not found'
+      });
+    }
+
+    res.json({ message: 'Actor restored successfully', actor: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
+  getManageableActors,
   getAllActors,
   getActorBySlug,
   createActor,
   updateActor,
-  deleteActor
+  deleteActor,
+  restoreActor
 };

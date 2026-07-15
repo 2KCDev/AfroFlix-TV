@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiArchive, FiEdit3, FiImage, FiPlus, FiRefreshCw, FiSave, FiSearch, FiUpload, FiX } from 'react-icons/fi';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { api } from '../../services/api';
@@ -45,12 +45,13 @@ const tabs = [
 
 const categories = ['Actualités', 'Classements', 'Analyses', 'Conseils'];
 
-const FilmTableFilters = ({
-  filmSearch,
-  setFilmSearch,
-  filmStatus,
-  setFilmStatus,
+const ContentTableFilters = ({
+  search,
+  setSearch,
+  status,
+  setStatus,
   onSubmit,
+  placeholder,
 }) => (
   <form onSubmit={onSubmit} className="w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
     <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
@@ -58,30 +59,23 @@ const FilmTableFilters = ({
       Recherche de contenus
     </h4>
     <div className="space-y-3">
-      <div className="flex flex-row gap-2 sm:gap-3">
-        <label className="block min-w-0 flex-grow">
+      <div>
+        <label className="block min-w-0">
           <span className="sr-only">Mots clés</span>
           <input
             type="search"
-            value={filmSearch}
-            onChange={(event) => setFilmSearch(event.target.value)}
-            placeholder="Mots clés: titre, acteur, réalisateur, genre..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={placeholder}
             className="w-full rounded-lg border-2 border-red-600 px-4 py-3 outline-none focus:ring-2 focus:ring-red-500"
           />
         </label>
-        <button
-          type="submit"
-          className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-red-600 px-3 py-3 font-semibold text-white transition hover:bg-red-700 sm:px-6"
-        >
-          <FiSearch size={18} />
-          <span>Rechercher</span>
-        </button>
       </div>
       <label className="block">
         <span className="block text-sm font-semibold text-gray-700 mb-1">Statut</span>
         <select
-          value={filmStatus}
-          onChange={(event) => setFilmStatus(event.target.value)}
+          value={status}
+          onChange={(event) => setStatus(event.target.value)}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-red-500"
         >
           <option value="">Tous les statuts</option>
@@ -105,6 +99,12 @@ const AdminContentManager = ({ user }) => {
   const [message, setMessage] = useState('');
   const [filmSearch, setFilmSearch] = useState('');
   const [filmStatus, setFilmStatus] = useState('');
+  const [actorSearch, setActorSearch] = useState('');
+  const [actorStatus, setActorStatus] = useState('');
+  const [articleSearch, setArticleSearch] = useState('');
+  const [articleStatus, setArticleStatus] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
+  const formRef = useRef(null);
 
   const canManageGenres = user?.role === 'admin';
   const canDelete = user?.role === 'admin';
@@ -121,9 +121,19 @@ const AdminContentManager = ({ user }) => {
           ...(filmSearch.trim().length >= 2 && { q: filmSearch.trim() }),
           ...(filmStatus && { status: filmStatus }),
         }),
-        api.actors({ page: 1, limit: 100 }),
-        api.adminArticles({ page: 1, limit: 100 }),
-        api.genres(),
+        api.adminActors({
+          page: 1,
+          limit: 100,
+          ...(actorSearch.trim().length >= 2 && { search: actorSearch.trim() }),
+          ...(actorStatus && { status: actorStatus }),
+        }),
+        api.adminArticles({
+          page: 1,
+          limit: 100,
+          ...(articleSearch.trim().length >= 2 && { q: articleSearch.trim() }),
+          ...(articleStatus && { status: articleStatus }),
+        }),
+        api.adminGenres(),
       ]);
 
       setData({
@@ -150,9 +160,9 @@ const AdminContentManager = ({ user }) => {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [filmSearch, filmStatus]);
+  }, [filmSearch, filmStatus, actorSearch, actorStatus, articleSearch, articleStatus]);
 
-  const applyFilmFilters = async (event) => {
+  const applyTableFilters = async (event) => {
     event.preventDefault();
     await load();
   };
@@ -211,6 +221,10 @@ const AdminContentManager = ({ user }) => {
       },
     };
     setForms((prev) => ({ ...prev, [type]: values[type] }));
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      formRef.current?.querySelector('input, select, textarea')?.focus({ preventScroll: true });
+    }, 0);
   };
 
   const submit = async (event) => {
@@ -252,31 +266,60 @@ const AdminContentManager = ({ user }) => {
     }
   };
 
-  const remove = async (type, item) => {
+  const canManageAction = (type, item) => {
     if (type === 'film' && !canArchiveFilm) {
       setMessage('Seul un administrateur ou l’éditeur propriétaire peut archiver ce film.');
-      return;
+      return false;
     }
     if (type === 'article' && !canArchiveArticle) {
       setMessage('Seul un administrateur ou l’éditeur propriétaire peut archiver cet article.');
-      return;
+      return false;
     }
     if (type === 'actor' && !['admin', 'editor'].includes(user?.role)) {
       setMessage('Seul un administrateur ou l’éditeur propriétaire peut archiver cet acteur.');
-      return;
+      return false;
     }
     if (!['film', 'article', 'actor'].includes(type) && !canDelete) {
       setMessage('Seul un administrateur peut supprimer ou archiver ce contenu.');
+      return false;
+    }
+    if (type === 'actor') return canManageRow(type, item, user, true);
+    return true;
+  };
+
+  const requestArchive = (type, item) => {
+    if (!canManageAction(type, item)) return;
+    setPendingAction({ mode: 'archive', type, item, step: 1 });
+  };
+
+  const requestRestore = (type, item) => {
+    if (!canManageAction(type, item)) return;
+    setPendingAction({ mode: 'restore', type, item, step: 1 });
+  };
+
+  const executePendingAction = async () => {
+    if (!pendingAction) return;
+    if (pendingAction.step === 1) {
+      setPendingAction((current) => ({ ...current, step: 2 }));
       return;
     }
-    if (!window.confirm(`Confirmer l'archivage ou la suppression de "${item.title || item.name}" ?`)) return;
 
+    const { mode, type, item } = pendingAction;
     try {
-      if (type === 'film') await api.deleteFilm(item.id);
-      if (type === 'actor') await api.deleteActor(item.id);
-      if (type === 'article') await api.deleteArticle(item.id);
-      if (type === 'genre') await api.deleteGenre(item.id);
+      if (mode === 'archive') {
+        if (type === 'film') await api.deleteFilm(item.id);
+        if (type === 'actor') await api.deleteActor(item.id);
+        if (type === 'article') await api.deleteArticle(item.id);
+        if (type === 'genre') await api.deleteGenre(item.id);
+      } else {
+        if (type === 'film') await api.restoreFilm(item.id);
+        if (type === 'actor') await api.restoreActor(item.id);
+        if (type === 'article') await api.restoreArticle(item.id);
+        if (type === 'genre') await api.restoreGenre(item.id);
+      }
+      setPendingAction(null);
       await load();
+      setMessage(mode === 'archive' ? 'Contenu archivé avec succès.' : 'Contenu désarchivé avec succès.');
     } catch (err) {
       setMessage(err.message);
     }
@@ -329,7 +372,7 @@ const AdminContentManager = ({ user }) => {
       </div>
 
       <div className="space-y-6">
-        <form onSubmit={submit} className="w-full bg-white rounded-lg shadow-md p-6 space-y-4">
+        <form ref={formRef} onSubmit={submit} className="w-full bg-white rounded-lg shadow-md p-6 space-y-4">
           <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <FiPlus className="text-red-600" />
             {editing ? 'Modifier' : 'Ajouter'} {tabs.find((tab) => tab.id === activeType)?.label.toLowerCase()}
@@ -448,12 +491,37 @@ const AdminContentManager = ({ user }) => {
         <div className="w-full">
           {activeType === 'film' && (
             <div className="mb-4">
-              <FilmTableFilters
-                filmSearch={filmSearch}
-                setFilmSearch={setFilmSearch}
-                filmStatus={filmStatus}
-                setFilmStatus={setFilmStatus}
-                onSubmit={applyFilmFilters}
+              <ContentTableFilters
+                search={filmSearch}
+                setSearch={setFilmSearch}
+                status={filmStatus}
+                setStatus={setFilmStatus}
+                onSubmit={applyTableFilters}
+                placeholder="Mots clés: titre, acteur, réalisateur, genre..."
+              />
+            </div>
+          )}
+          {activeType === 'actor' && (
+            <div className="mb-4">
+              <ContentTableFilters
+                search={actorSearch}
+                setSearch={setActorSearch}
+                status={actorStatus}
+                setStatus={setActorStatus}
+                onSubmit={applyTableFilters}
+                placeholder="Mots clés: nom, biographie..."
+              />
+            </div>
+          )}
+          {activeType === 'article' && (
+            <div className="mb-4">
+              <ContentTableFilters
+                search={articleSearch}
+                setSearch={setArticleSearch}
+                status={articleStatus}
+                setStatus={setArticleStatus}
+                onSubmit={applyTableFilters}
+                placeholder="Mots clés: titre, contenu, catégorie, auteur..."
               />
             </div>
           )}
@@ -465,12 +533,18 @@ const AdminContentManager = ({ user }) => {
               rows={rows[activeType]}
               user={user}
               onEdit={(item) => editItem(activeType, item)}
-              onRemove={(item) => remove(activeType, item)}
+              onArchive={(item) => requestArchive(activeType, item)}
+              onRestore={(item) => requestRestore(activeType, item)}
               canDelete={activeType === 'film' ? canArchiveFilm : activeType === 'article' ? canArchiveArticle : activeType === 'actor' ? user?.role === 'admin' || user?.role === 'editor' : canDelete}
             />
           )}
         </div>
       </div>
+      <ArchiveConfirmDialog
+        action={pendingAction}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={executePendingAction}
+      />
     </section>
   );
 };
@@ -663,7 +737,66 @@ const canManageRow = (type, item, user, canDelete) => {
   return user?.role === 'editor' && String(item.created_by ?? item.createdBy ?? '') === String(user?.id ?? '');
 };
 
-const ContentTable = ({ type, rows, user, onEdit, onRemove, canDelete }) => (
+const archiveActionLabels = {
+  archive: {
+    title: 'Confirmer l’archivage',
+    warning: 'Ce contenu ne sera plus visible publiquement. Vous pourrez le désarchiver plus tard depuis cet espace.',
+    firstLabel: 'Archiver ?',
+    finalLabel: 'Archiver',
+  },
+  restore: {
+    title: 'Confirmer le désarchivage',
+    warning: 'Ce contenu redeviendra disponible selon ses règles de publication. Vérifiez qu’il est prêt à être restauré.',
+    firstLabel: 'Désarchiver ?',
+    finalLabel: 'Désarchiver',
+  },
+};
+
+const ArchiveConfirmDialog = ({ action, onCancel, onConfirm }) => {
+  if (!action) return null;
+
+  const labels = archiveActionLabels[action.mode];
+  const itemName = action.item.title || action.item.name || 'ce contenu';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-start gap-3">
+          <span className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+            <FiArchive size={20} />
+          </span>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">{labels.title}</h3>
+            <p className="mt-1 text-sm text-gray-600">{labels.warning}</p>
+          </div>
+        </div>
+        <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-900">
+          {action.step === 1
+            ? `Première confirmation pour "${itemName}".`
+            : `Dernière confirmation requise pour "${itemName}".`}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+          >
+            {action.step === 1 ? labels.firstLabel : labels.finalLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ContentTable = ({ type, rows, user, onEdit, onArchive, onRestore, canDelete }) => (
   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -677,6 +810,7 @@ const ContentTable = ({ type, rows, user, onEdit, onRemove, canDelete }) => (
         <tbody>
           {rows.map((item) => {
             const canManage = canManageRow(type, item, user, canDelete);
+            const isArchived = item.status === 'archived';
 
             return (
             <tr key={item.id} className="border-t border-gray-100">
@@ -686,9 +820,9 @@ const ContentTable = ({ type, rows, user, onEdit, onRemove, canDelete }) => (
               </td>
               <td className="px-4 py-3 text-gray-600">
                 {type === 'film' && <span>{item.year || 'Année ?'} · {item.status || 'published'} · {Number(item.views || 0).toLocaleString()} vues</span>}
-                {type === 'actor' && <span>{truncateText(item.biography || 'Biographie non renseignée', 90)}</span>}
-                {type === 'article' && <span>{item.category} · {formatDate(item.published_at || item.created_at)}</span>}
-                {type === 'genre' && <span>{truncateText(item.description || 'Introduction non renseignée', 90)}</span>}
+                {type === 'actor' && <span>{item.status || 'published'} · {truncateText(item.biography || 'Biographie non renseignée', 90)}</span>}
+                {type === 'article' && <span>{item.category} · {item.status || 'published'} · {formatDate(item.published_at || item.created_at)}</span>}
+                {type === 'genre' && <span>{item.status || 'published'} · {truncateText(item.description || 'Introduction non renseignée', 90)}</span>}
               </td>
               <td className="px-4 py-3">
                 <div className="flex justify-end gap-2">
@@ -701,12 +835,16 @@ const ContentTable = ({ type, rows, user, onEdit, onRemove, canDelete }) => (
                     Modifier
                   </button>
                   <button
-                    onClick={() => canManage && onRemove(item)}
+                    onClick={() => canManage && (isArchived ? onRestore(item) : onArchive(item))}
                     disabled={!canManage}
-                    className="inline-flex items-center gap-2 px-3 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className={`inline-flex items-center gap-2 px-3 py-2 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isArchived
+                        ? 'border-green-200 text-green-700 hover:bg-green-50'
+                        : 'border-red-200 text-red-600 hover:bg-red-50'
+                    }`}
                   >
                     <FiArchive size={16} />
-                    Archiver
+                    {isArchived ? 'Désarchiver' : 'Archiver'}
                   </button>
                 </div>
               </td>

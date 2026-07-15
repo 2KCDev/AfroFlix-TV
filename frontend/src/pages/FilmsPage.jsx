@@ -135,7 +135,6 @@ const FilmsPage = () => {
                   onChange={setKeywordTerm}
                   onSubmit={handleKeywordSearch}
                   placeholder="Titre, acteur, réalisateur, pays..."
-                  buttonLabel="Rechercher"
                   autoSubmit
                 />
               </div>

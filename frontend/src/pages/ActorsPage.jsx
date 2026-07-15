@@ -49,7 +49,6 @@ const ActorsPage = () => {
           onChange={setSearchTerm}
           onSubmit={handleSearch}
           placeholder="Chercher un acteur..."
-          buttonLabel="Rechercher"
           autoSubmit
         />
       </div>

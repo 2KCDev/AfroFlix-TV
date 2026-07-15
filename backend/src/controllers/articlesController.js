@@ -60,7 +60,7 @@ const notifyNewsletterSubscribers = async (article) => {
 // GET manageable articles for admin/editor spaces.
 const getManageableArticles = async (req, res) => {
   try {
-    const { page = 1, limit = 100, status } = req.query;
+    const { page = 1, limit = 100, status, q } = req.query;
     const currentPage = parsePositiveInt(page, 1, { min: 1, max: 100000 });
     const pageSize = parsePositiveInt(limit, 100, { min: 1, max: 100 });
     const offset = (currentPage - 1) * pageSize;
@@ -76,6 +76,17 @@ const getManageableArticles = async (req, res) => {
     if (status) {
       where += ` AND status = $${paramIndex++}`;
       params.push(status);
+    }
+
+    if (q && q.trim().length >= 2) {
+      where += ` AND (
+        title ILIKE $${paramIndex}
+        OR content ILIKE $${paramIndex}
+        OR category ILIKE $${paramIndex}
+        OR author ILIKE $${paramIndex}
+      )`;
+      params.push(`%${q.trim()}%`);
+      paramIndex++;
     }
 
     const countResult = await pool.query(`SELECT COUNT(*) FROM articles ${where}`, params);
