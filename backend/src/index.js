@@ -75,23 +75,27 @@ const allowedOrigins = (
   .split(',')
   .map(origin => origin.trim());
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Autorise Postman, curl, healthcheck, etc.
-      if (!origin) {
-        return callback(null, true);
-      }
+const corsOptions = {
+  origin(origin, callback) {
+    // Autorise les requêtes sans Origin (curl, Postman, healthcheck...)
+    if (!origin) {
+      return callback(null, true);
+    }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-      return callback(new Error(`Origin ${origin} not allowed by CORS`));
-    },
-    credentials: true,
-  })
-);
+    console.warn(`CORS blocked origin: ${origin}`);
+
+    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // =========================
 // Body Parser
