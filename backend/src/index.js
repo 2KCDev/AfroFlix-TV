@@ -6,6 +6,7 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
+
 const pool = require('./db/pool');
 const { ensureDatabaseReady } = require('./db/init');
 const { startEmailQueueWorker } = require('./services/emailService');
@@ -13,66 +14,119 @@ const { startEmailQueueWorker } = require('./services/emailService');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// The backend is served behind nginx in Docker, so Express must trust the first proxy
-// for accurate client IP handling in rate limiting, logging and moderation.
+// Le backend est servi derrière Nginx dans Docker
 app.set('trust proxy', 1);
 
-// Middleware de sécurité et performance
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      baseUri: ["'self'"],
-      fontSrc: ["'self'", 'https:', 'data:'],
-      formAction: ["'self'"],
-      frameAncestors: ["'self'"],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
-      imgSrc: ["'self'", 'https:', 'data:'],
-      mediaSrc: ["'self'", 'https:'],
-      objectSrc: ["'none'"],
-      scriptSrc: ["'self'"],
-      scriptSrcAttr: ["'none'"],
-      styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
-      upgradeInsecureRequests: [],
+// =========================
+// Security
+// =========================
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        fontSrc: ["'self'", 'https:', 'data:'],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+        frameSrc: [
+          "'self'",
+          'https://www.youtube.com',
+          'https://www.youtube-nocookie.com',
+        ],
+        imgSrc: ["'self'", 'https:', 'data:'],
+        mediaSrc: ["'self'", 'https:'],
+        objectSrc: ["'none'"],
+        scriptSrc: ["'self'"],
+        scriptSrcAttr: ["'none'"],
+        styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
+        upgradeInsecureRequests: [],
+      },
     },
-  },
-}));
+  })
+);
 
 app.use(compression());
 app.use(morgan('combined'));
 
-// Rate limiting
+// =========================
+// Rate Limit
+// =========================
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500,                 // 500 requêtes par IP
-  skip: (req) => req.method === 'OPTIONS', // Ignore les requêtes OPTIONS
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  skip: (req) => req.method === 'OPTIONS',
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 app.use(limiter);
 
+// =========================
 // CORS
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+// =========================
 
-// Body parsing
+const allowedOrigins = (
+  process.env.CORS_ORIGIN ||
+  'https://afroflix-tv.com,https://www.afroflix-tv.com'
+)
+  .split(',')
+  .map(origin => origin.trim());
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Autorise Postman, curl, healthcheck, etc.
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  })
+);
+
+// =========================
+// Body Parser
+// =========================
+
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-  maxAge: '30d',
-  immutable: true
-}));
+// =========================
+// Static uploads
+// =========================
 
-// Health check
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '../uploads'), {
+    maxAge: '30d',
+    immutable: true,
+  })
+);
+
+// =========================
+// Health Check
+// =========================
+
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date(),
+  });
 });
 
-// Routes
+// =========================
+// API Routes
+// =========================
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/films', require('./routes/films'));
 app.use('/api/actors', require('./routes/actors'));
@@ -88,29 +142,45 @@ app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/uploads', require('./routes/uploads'));
 
-// 404 handler
+// =========================
+// 404
+// =========================
+
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({
+    error: 'Route not found',
+  });
 });
 
-// Error handler
+// =========================
+// Error Handler
+// =========================
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
 
   res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : err.message
+    error:
+      process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : err.message,
   });
 });
 
-pool.query('SELECT 1')
+// =========================
+// Start Server
+// =========================
+
+pool
+  .query('SELECT 1')
   .then(async () => {
     await ensureDatabaseReady();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log('Allowed CORS origins:', allowedOrigins);
+
       startEmailQueueWorker();
     });
   })
