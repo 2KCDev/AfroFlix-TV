@@ -1,19 +1,4 @@
-const configuredApiBase = import.meta.env.VITE_API_URL || '/api';
-const API_BASE = (() => {
-  if (typeof window === 'undefined') return configuredApiBase;
-
-  try {
-    const apiUrl = new URL(configuredApiBase, window.location.origin);
-    const isAfroflixFrontend = ['afroflix-tv.com', 'www.afroflix-tv.com'].includes(window.location.hostname);
-    if (isAfroflixFrontend && apiUrl.hostname === 'api.afroflix-tv.com') {
-      return '/api';
-    }
-  } catch (err) {
-    return configuredApiBase;
-  }
-
-  return configuredApiBase;
-})();
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const GET_CACHE = new Map();
 const DEFAULT_GET_CACHE_TTL = 30000;
 
