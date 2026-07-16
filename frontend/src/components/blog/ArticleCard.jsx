@@ -48,8 +48,12 @@ const ArticleCard = ({ article, horizontal = false }) => {
       to={`/actualites/${article.slug}`}
       className="group overflow-hidden rounded-lg bg-white shadow-md transition hover:shadow-lg"
     >
-      <div className="flex h-40 items-center justify-center bg-red-50 p-6">
-        <h3 className="line-clamp-3 text-center text-lg font-bold text-gray-800 transition group-hover:text-red-600">
+      <div
+        className="relative flex h-44 items-end overflow-hidden bg-red-50 p-5"
+        style={image ? { backgroundImage: `url(${image})`, backgroundPosition: 'center', backgroundSize: 'cover' } : undefined}
+      >
+        {image && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 transition group-hover:from-black/85" />}
+        <h3 className={`relative line-clamp-3 text-lg font-bold transition ${image ? 'text-white' : 'text-gray-800 group-hover:text-red-600'}`}>
           {article.title}
         </h3>
       </div>

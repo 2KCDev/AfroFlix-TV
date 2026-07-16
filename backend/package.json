@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "2.4.3",
+    "cloudinary": "^1.41.3",
     "compression": "1.8.1",
     "cors": "2.8.5",
     "dotenv": "16.0.3",
@@ -26,6 +27,7 @@
     "jsonwebtoken": "9.0.2",
     "morgan": "1.11.0",
     "multer": "^2.2.0",
+    "multer-storage-cloudinary": "^4.0.0",
     "pg": "8.10.0",
     "resend": "^6.17.2"
   }

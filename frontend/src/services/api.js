@@ -1,4 +1,19 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const configuredApiBase = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = (() => {
+  if (typeof window === 'undefined') return configuredApiBase;
+
+  try {
+    const apiUrl = new URL(configuredApiBase, window.location.origin);
+    const isAfroflixFrontend = ['afroflix-tv.com', 'www.afroflix-tv.com'].includes(window.location.hostname);
+    if (isAfroflixFrontend && apiUrl.hostname === 'api.afroflix-tv.com') {
+      return '/api';
+    }
+  } catch (err) {
+    return configuredApiBase;
+  }
+
+  return configuredApiBase;
+})();
 const GET_CACHE = new Map();
 const DEFAULT_GET_CACHE_TTL = 30000;
 
@@ -198,6 +213,15 @@ export const api = {
     request(`/comments/${commentId}/approve`, { method: 'PUT' }),
   rejectComment: (commentId) =>
     request(`/comments/${commentId}/reject`, { method: 'PUT' }),
+  uploadImage: (file, type = 'misc') => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', type);
+    return request('/uploads/image', {
+      method: 'POST',
+      body: formData,
+    });
+  },
   uploadPoster: (file) => {
     const formData = new FormData();
     formData.append('image', file);

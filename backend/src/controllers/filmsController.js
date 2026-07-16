@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const { deleteReplacedManagedImage } = require('../services/cloudinaryService');
 const { parsePositiveInt, schemas, validatePayload } = require('../utils/validation');
 
 const slugify = (value = '') => value
@@ -463,7 +464,7 @@ const createFilm = async (req, res) => {
 
     const slug = normalizeFilmSlug(requestedSlug || title);
     if (!slug) {
-      return res.status(400).json({ error: 'Affiche URL est obligatoire' });
+      return res.status(400).json({ error: 'Le nom d’URL du film est obligatoire.' });
     }
     if (slug.length > MAX_FILM_SLUG_LENGTH) {
       return res.status(400).json({ error: 'Le nom d’URL du film doit contenir 30 caractères maximum.' });
@@ -527,6 +528,9 @@ const updateFilm = async (req, res) => {
     const updateFields = [];
     const updateValues = [];
     let paramIndex = 1;
+    const previousImageResult = poster_url !== undefined
+      ? await pool.query('SELECT poster_url FROM films WHERE id = $1', [id])
+      : null;
 
     if (title !== undefined) {
       updateFields.push(`title = $${paramIndex++}`);
@@ -535,7 +539,7 @@ const updateFilm = async (req, res) => {
     if (requestedSlug !== undefined) {
       const slug = normalizeFilmSlug(requestedSlug);
       if (!slug) {
-        return res.status(400).json({ error: 'Affiche URL est obligatoire' });
+        return res.status(400).json({ error: 'Le nom d’URL du film est obligatoire.' });
       }
       if (slug.length > MAX_FILM_SLUG_LENGTH) {
         return res.status(400).json({ error: 'Le nom d’URL du film doit contenir 30 caractères maximum.' });
@@ -623,6 +627,10 @@ const updateFilm = async (req, res) => {
 
     if (Array.isArray(actors)) {
       await replaceFilmActors(id, actors);
+    }
+
+    if (poster_url !== undefined) {
+      await deleteReplacedManagedImage(previousImageResult?.rows[0]?.poster_url, result.rows[0].poster_url);
     }
 
     res.json({ message: 'Film updated successfully', film: result.rows[0] });
@@ -736,8 +744,16 @@ const search = async (req, res) => {
 
     // Search actors
     const actorsResult = await pool.query(
-      `SELECT id, name, slug, photo_url, biography FROM actors
-       WHERE name ILIKE $1
+      `SELECT a.id, a.name, a.slug, a.photo_url, a.biography,
+        (
+          SELECT COUNT(*)
+          FROM film_actors fa
+          JOIN films f ON f.id = fa.film_id
+          WHERE fa.actor_id = a.id AND f.status = 'published'
+        )::int AS film_count
+       FROM actors a
+       WHERE COALESCE(a.status, 'published') = 'published'
+         AND a.name ILIKE $1
        LIMIT 10`,
       [searchTerm]
     );

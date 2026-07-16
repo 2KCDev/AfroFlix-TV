@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const { deleteReplacedManagedImage } = require('../services/cloudinaryService');
 const { sendArticleNotificationEmail } = require('../services/emailService');
 const { parsePositiveInt, schemas, validatePayload } = require('../utils/validation');
 
@@ -228,6 +229,9 @@ const updateArticle = async (req, res) => {
     const updateFields = [];
     const updateValues = [];
     let paramIndex = 1;
+    const previousImageResult = featured_image !== undefined
+      ? await pool.query('SELECT featured_image FROM articles WHERE id = $1', [id])
+      : null;
 
     if (title !== undefined) {
       updateFields.push(`title = $${paramIndex++}`);
@@ -276,6 +280,10 @@ const updateArticle = async (req, res) => {
           ? 'Access denied. Editors can only update their own articles'
           : 'Article not found'
       });
+    }
+
+    if (featured_image !== undefined) {
+      await deleteReplacedManagedImage(previousImageResult?.rows[0]?.featured_image, result.rows[0].featured_image);
     }
 
     res.json({ message: 'Article updated successfully', article: result.rows[0] });

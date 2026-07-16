@@ -10,22 +10,19 @@ const ArticleCard = ({ article }) => {
       to={`/actualites/${article.slug}`}
       className="group rounded-lg overflow-hidden bg-white shadow-md hover:shadow-lg transition-all"
     >
-      {image && (
-        <div className="bg-gray-300 h-40 overflow-hidden">
-          <img
-            src={image}
-            alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          />
-        </div>
-      )}
+      <div
+        className="relative flex h-40 items-end overflow-hidden bg-red-50 p-4"
+        style={image ? { backgroundImage: `url(${image})`, backgroundPosition: 'center', backgroundSize: 'cover' } : undefined}
+      >
+        {image && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 transition group-hover:from-black/85" />}
+        <h3 className={`relative line-clamp-2 font-bold transition ${image ? 'text-white' : 'text-gray-900 group-hover:text-red-600'}`}>
+          {article.title}
+        </h3>
+      </div>
       <div className="p-4">
         <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">
           {article.category || 'Article'}
         </span>
-        <h3 className="font-bold text-gray-900 group-hover:text-red-600 transition mt-2 line-clamp-2">
-          {article.title}
-        </h3>
         <p className="text-sm text-gray-600 mt-2 line-clamp-2">
           {article.excerpt || article.content?.substring(0, 100)}...
         </p>

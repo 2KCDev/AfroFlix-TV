@@ -37,7 +37,7 @@ const Footer = () => {
           {/* Brand */}
           <div>
             <h3 className="text-2xl font-bold text-white mb-4">AFROFLIX.TV</h3>
-            <p className="text-sm mb-6">
+            <p className="text-sm mb-6 text-justify">
               Votre référence en français pour découvrir le cinéma africain.
             </p>
             <div className="flex gap-5">
@@ -154,7 +154,7 @@ const Footer = () => {
         {/* Newsletter */}
         <div className="bg-red-600 bg-opacity-10 border border-red-600 border-opacity-30 rounded-lg p-6 mb-8">
           <h4 className="text-white font-bold mb-2">Restez informé</h4>
-          <p className="text-sm mb-4">
+          <p className="text-sm mb-4 text-justify">
             Recevez les dernières actualités du AfroFlix.TV
           </p>
           <form className="flex gap-2" onSubmit={handleNewsletterSubmit}>
@@ -187,7 +187,7 @@ const Footer = () => {
         {/* Bottom */}
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
-            <p>
+            <p className="text-justify">
               © {currentYear} AFROFLIX.TV. Tous droits réservés.
             </p>
             <div className="flex gap-6">

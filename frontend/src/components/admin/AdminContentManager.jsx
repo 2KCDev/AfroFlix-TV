@@ -95,7 +95,7 @@ const AdminContentManager = ({ user }) => {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [posterFile, setPosterFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState({ film: null, actor: null, article: null });
   const [message, setMessage] = useState('');
   const [filmSearch, setFilmSearch] = useState('');
   const [filmStatus, setFilmStatus] = useState('');
@@ -181,14 +181,14 @@ const AdminContentManager = ({ user }) => {
 
   const resetForm = () => {
     setEditing(null);
-    setPosterFile(null);
+    setImageFiles((prev) => ({ ...prev, [activeType]: null }));
     setForms((prev) => ({ ...prev, [activeType]: initialForms[activeType] }));
   };
 
   const editItem = (type, item) => {
     setActiveType(type);
     setEditing(item);
-    setPosterFile(null);
+    setImageFiles((prev) => ({ ...prev, [type]: null }));
     const values = {
       film: {
         title: item.title || '',
@@ -236,8 +236,8 @@ const AdminContentManager = ({ user }) => {
       if (payload.year) payload.year = Number(payload.year);
 
       if (activeType === 'film') {
-        if (posterFile) {
-          const upload = await api.uploadPoster(posterFile);
+        if (imageFiles.film) {
+          const upload = await api.uploadImage(imageFiles.film, 'film');
           payload.poster_url = upload.url;
         }
         payload.slug = payload.slug?.trim().slice(0, 30) || '';
@@ -246,9 +246,19 @@ const AdminContentManager = ({ user }) => {
         editing ? await api.updateFilm(editing.id, payload) : await api.createFilm(payload);
       }
       if (activeType === 'actor') {
+        if (imageFiles.actor) {
+          const upload = await api.uploadImage(imageFiles.actor, 'actor');
+          payload.photo_url = upload.url;
+        }
+        payload.photo_url = payload.photo_url?.trim() || '';
         editing ? await api.updateActor(editing.id, payload) : await api.createActor(payload);
       }
       if (activeType === 'article') {
+        if (imageFiles.article) {
+          const upload = await api.uploadImage(imageFiles.article, 'article');
+          payload.featured_image = upload.url;
+        }
+        payload.featured_image = payload.featured_image?.trim() || '';
         editing ? await api.updateArticle(editing.id, payload) : await api.createArticle(payload);
       }
       if (activeType === 'genre') {
@@ -390,9 +400,9 @@ const AdminContentManager = ({ user }) => {
               <TextArea label="Description originale" value={currentForm.description} onChange={(value) => setField('description', value)} minLength={300} required />
               <ImageUpload
                 label="Image d'affiche visible sur le site"
-                file={posterFile}
+                file={imageFiles.film}
                 imageUrl={currentForm.poster_url}
-                onFileChange={setPosterFile}
+                onFileChange={(file) => setImageFiles((prev) => ({ ...prev, film: file }))}
                 onUrlChange={(value) => setField('poster_url', value)}
               />
               <TextInput
@@ -439,7 +449,14 @@ const AdminContentManager = ({ user }) => {
               <TextInput label="Nom" value={currentForm.name} onChange={(value) => setField('name', value)} required />
               <TextArea label="Biographie originale" value={currentForm.biography} onChange={(value) => setField('biography', value)} minLength={150} />
               <TextInput label="Date de naissance" type="date" value={currentForm.birth_date} onChange={(value) => setField('birth_date', value)} />
-              <TextInput label="Photo URL" value={currentForm.photo_url} onChange={(value) => setField('photo_url', value)} />
+              <ImageUpload
+                label="Photo de l'acteur"
+                file={imageFiles.actor}
+                imageUrl={currentForm.photo_url}
+                onFileChange={(file) => setImageFiles((prev) => ({ ...prev, actor: file }))}
+                onUrlChange={(value) => setField('photo_url', value)}
+                previewClassName="aspect-square"
+              />
             </>
           )}
 
@@ -457,7 +474,14 @@ const AdminContentManager = ({ user }) => {
                 </select>
               </label>
               <TextArea label="Contenu original" value={currentForm.content} onChange={(value) => setField('content', value)} minLength={600} required />
-              <TextInput label="Image principale URL" value={currentForm.featured_image} onChange={(value) => setField('featured_image', value)} />
+              <ImageUpload
+                label="Image principale"
+                file={imageFiles.article}
+                imageUrl={currentForm.featured_image}
+                onFileChange={(file) => setImageFiles((prev) => ({ ...prev, article: file }))}
+                onUrlChange={(value) => setField('featured_image', value)}
+                previewClassName="aspect-video"
+              />
               <TextInput label="Auteur" value={currentForm.author} onChange={(value) => setField('author', value)} />
             </>
           )}
@@ -664,7 +688,7 @@ const SlugInput = ({ label, value, onChange, required }) => {
   );
 };
 
-const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange }) => {
+const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange, previewClassName = 'aspect-[2/3]' }) => {
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : imageUrl), [file, imageUrl]);
 
   useEffect(() => {
@@ -677,9 +701,9 @@ const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange }) => {
     <div className="space-y-2">
       <span className="block text-sm font-semibold text-gray-700">{label}</span>
       <div className="grid gap-3 sm:grid-cols-[96px_1fr]">
-        <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+        <div className={`relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 ${previewClassName}`}>
           {previewUrl ? (
-            <img src={previewUrl} alt="Aperçu affiche" className="h-full w-full object-cover" />
+            <img src={previewUrl} alt="Aperçu image" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-gray-400">
               <FiImage size={28} />
@@ -756,7 +780,6 @@ const ArchiveConfirmDialog = ({ action, onCancel, onConfirm }) => {
   if (!action) return null;
 
   const labels = archiveActionLabels[action.mode];
-  const itemName = action.item.title || action.item.name || 'ce contenu';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -769,11 +792,6 @@ const ArchiveConfirmDialog = ({ action, onCancel, onConfirm }) => {
             <h3 className="text-lg font-bold text-gray-900">{labels.title}</h3>
             <p className="mt-1 text-sm text-gray-600">{labels.warning}</p>
           </div>
-        </div>
-        <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-900">
-          {action.step === 1
-            ? `Première confirmation pour "${itemName}".`
-            : `Dernière confirmation requise pour "${itemName}".`}
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button

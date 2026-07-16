@@ -148,7 +148,7 @@ const LegalPage = ({ type = 'about' }) => {
       {type === 'contact' ? (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.25fr]">
           <div
-            className="prose prose-lg max-w-none rounded-lg bg-white p-8 shadow-md"
+            className="legal-content prose prose-lg max-w-none rounded-lg bg-white p-8 text-justify shadow-md"
             dangerouslySetInnerHTML={{ __html: page.content }}
           />
           <ContactForm />
@@ -156,7 +156,7 @@ const LegalPage = ({ type = 'about' }) => {
       ) : type === 'cookies' ? (
         <div className="space-y-4">
           <div
-            className="prose prose-lg max-w-none bg-white rounded-lg shadow-md p-8"
+            className="legal-content prose prose-lg max-w-none rounded-lg bg-white p-8 text-justify shadow-md"
             dangerouslySetInnerHTML={{ __html: page.content }}
           />
           <button
@@ -169,7 +169,7 @@ const LegalPage = ({ type = 'about' }) => {
         </div>
       ) : (
         <div
-          className="prose prose-lg max-w-none bg-white rounded-lg shadow-md p-8"
+          className="legal-content prose prose-lg max-w-none rounded-lg bg-white p-8 text-justify shadow-md"
           dangerouslySetInnerHTML={{ __html: page.content }}
         />
       )}

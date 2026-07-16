@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const { deleteReplacedManagedImage } = require('../services/cloudinaryService');
 const { schemas, validatePayload } = require('../utils/validation');
 
 let actorOwnershipMigration;
@@ -27,6 +28,15 @@ const assertUniqueActorName = async ({ name, excludeId = null }) => {
   const result = await pool.query(query, params);
   return result.rows.length ? 'Un acteur avec ce nom existe déjà.' : null;
 };
+
+const actorFilmCountSelect = `
+  (
+    SELECT COUNT(*)
+    FROM film_actors fa
+    JOIN films f ON f.id = fa.film_id
+    WHERE fa.actor_id = actors.id AND f.status = 'published'
+  )::int AS film_count
+`;
 
 // GET manageable actors for admin/editor spaces.
 const getManageableActors = async (req, res) => {
@@ -57,7 +67,8 @@ const getManageableActors = async (req, res) => {
 
     const countResult = await pool.query(`SELECT COUNT(*) FROM actors ${where}`, params);
     const result = await pool.query(
-      `SELECT * FROM actors ${where}
+      `SELECT actors.*, ${actorFilmCountSelect}
+       FROM actors ${where}
        ORDER BY name ASC
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, pageSize, offset]
@@ -87,7 +98,11 @@ const getAllActors = async (req, res) => {
     const pageSize = Math.min(Math.max(parseInt(limit, 10) || 12, 1), 100);
     const offset = (currentPage - 1) * pageSize;
 
-    let query = `SELECT * FROM actors WHERE COALESCE(status, 'published') = 'published'`;
+    let query = `
+      SELECT actors.*, ${actorFilmCountSelect}
+      FROM actors
+      WHERE COALESCE(status, 'published') = 'published'
+    `;
     const params = [];
 
     if (search) {
@@ -220,6 +235,9 @@ const updateActor = async (req, res) => {
     const updateFields = [];
     const updateValues = [];
     let paramIndex = 1;
+    const previousImageResult = photo_url !== undefined
+      ? await pool.query('SELECT photo_url FROM actors WHERE id = $1', [id])
+      : null;
 
     if (name !== undefined) {
       const uniqueError = await assertUniqueActorName({ name, excludeId: id });
@@ -264,6 +282,10 @@ const updateActor = async (req, res) => {
           ? 'Access denied. Editors can only update their own actors'
           : 'Actor not found'
       });
+    }
+
+    if (photo_url !== undefined) {
+      await deleteReplacedManagedImage(previousImageResult?.rows[0]?.photo_url, result.rows[0].photo_url);
     }
 
     res.json({ message: 'Actor updated successfully', actor: result.rows[0] });

@@ -57,6 +57,45 @@ const withAutoplay = (value) => {
 const YOUTUBE_OFFLINE_MESSAGE = 'Veuillez vérifier votre connexion Internet, puis réessayer.';
 const YOUTUBE_CONNECTIVITY_URL = 'https://www.youtube.com/generate_204';
 
+const ensureDirectFilmBackTarget = (slug) => {
+  if (typeof window === 'undefined' || !slug) return;
+
+  const state = window.history.state || {};
+  const routerState = state.usr || {};
+  const isInitialAppEntry = typeof state.idx === 'number' ? state.idx === 0 : window.history.length <= 1;
+
+  if (!isInitialAppEntry || routerState.afroflixFilmBackTarget) return;
+
+  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const nextIndex = typeof state.idx === 'number' ? state.idx + 1 : state.idx;
+
+  window.history.replaceState(
+    {
+      ...state,
+      usr: {
+        ...routerState,
+        afroflixFilmBackTarget: true,
+      },
+    },
+    '',
+    '/films'
+  );
+
+  window.history.pushState(
+    {
+      ...state,
+      idx: nextIndex,
+      usr: {
+        ...routerState,
+        afroflixFilmBackTarget: true,
+        afroflixFilmSlug: slug,
+      },
+    },
+    '',
+    currentUrl
+  );
+};
+
 const FilmDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -93,6 +132,10 @@ const FilmDetail = () => {
   const [videoRetryKey, setVideoRetryKey] = useState(0);
 
   const videoUrl = film ? getYouTubeEmbedUrl(film.youtube_embed_url || film.youtubeEmbedUrl || film.video_url) : '';
+
+  useEffect(() => {
+    ensureDirectFilmBackTarget(slug);
+  }, [slug]);
 
   useEffect(() => {
     const updateOnlineStatus = () => {
