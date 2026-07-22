@@ -39,6 +39,8 @@ const Home = () => {
   }, []);
 
   const popular = popularData?.films || [];
+  console.log("popularData =", popularData);
+  console.log("popular =", popular);
   const films = filmsData?.films || [];
   const trending = trendingData?.films || [];
   const articles = articlesData?.articles || [];
