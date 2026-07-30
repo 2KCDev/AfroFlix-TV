@@ -4,32 +4,33 @@ import { FiArrowRight, FiEye, FiFile, FiTrendingUp, FiUsers } from 'react-icons/
 import ActorGrid from '../components/actors/ActorGrid';
 import ArticleCard from '../components/blog/ArticleCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorState from '../components/ErrorState';
 import SEO from '../components/common/SEO';
 import FilmGrid from '../components/films/FilmGrid';
 import EditorialRequirements from '../components/sections/EditorialRequirements';
 import { useActors, useArticles, useFilms, useTrendingFilms } from '../hooks/useFilms';
 
 const Home = () => {
-  const { data: popularData, loading: popularLoading } = useFilms({
+  const { data: popularData, loading: popularLoading, error: popularError } = useFilms({
     page: 1,
     limit: 6,
     sortBy: 'popular',
   });
 
-  const { data: filmsData, loading: filmsLoading } = useFilms({
+  const { data: filmsData, loading: filmsLoading, error: filmsError } = useFilms({
     page: 1,
     limit: 6,
     sortBy: 'created_at',
   });
 
-  const { data: trendingData, loading: trendingLoading } = useTrendingFilms();
+  const { data: trendingData, loading: trendingLoading, error: trendingError } = useTrendingFilms();
 
-  const { data: articlesData, loading: articlesLoading } = useArticles({
+  const { data: articlesData, loading: articlesLoading, error: articlesError } = useArticles({
     page: 1,
     limit: 3,
   });
 
-  const { data: actorsData, loading: actorsLoading } = useActors({
+  const { data: actorsData, loading: actorsLoading, error: actorsError } = useActors({
     page: 1,
     limit: 4,
   });
@@ -39,8 +40,6 @@ const Home = () => {
   }, []);
 
   const popular = popularData?.films || [];
-  console.log("popularData =", popularData);
-  console.log("popular =", popular);
   const films = filmsData?.films || [];
   const trending = trendingData?.films || [];
   const articles = articlesData?.articles || [];
@@ -115,6 +114,8 @@ const Home = () => {
 
         {popularLoading ? (
           <LoadingSpinner />
+        ) : popularError ? (
+          <ErrorState message="Les films populaires sont momentanément indisponibles. Réessayez dans quelques instants." />
         ) : popular.length > 0 ? (
           <FilmGrid films={popular} />
         ) : (
@@ -151,6 +152,8 @@ const Home = () => {
 
         {trendingLoading ? (
           <LoadingSpinner />
+        ) : trendingError ? (
+          <ErrorState message="Les tendances sont momentanément indisponibles. Réessayez dans quelques instants." />
         ) : trending.length > 0 ? (
           <FilmGrid films={trending} />
         ) : (
@@ -186,6 +189,8 @@ const Home = () => {
 
         {filmsLoading ? (
           <LoadingSpinner />
+        ) : filmsError ? (
+          <ErrorState message="Les derniers films sont momentanément indisponibles. Réessayez dans quelques instants." />
         ) : films.length > 0 ? (
           <FilmGrid films={films} />
         ) : (
@@ -223,6 +228,8 @@ const Home = () => {
 
         {articlesLoading ? (
           <LoadingSpinner />
+        ) : articlesError ? (
+          <ErrorState message="Les articles sont momentanément indisponibles. Réessayez dans quelques instants." />
         ) : articles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {articles.map((article) => (
@@ -267,6 +274,8 @@ const Home = () => {
 
         {actorsLoading ? (
           <LoadingSpinner />
+        ) : actorsError ? (
+          <ErrorState message="Les acteurs sont momentanément indisponibles. Réessayez dans quelques instants." />
         ) : actors.length > 0 ? (
           <ActorGrid actors={actors} />
         ) : (

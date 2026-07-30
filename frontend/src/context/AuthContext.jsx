@@ -1,5 +1,6 @@
 import React, { createContext, useReducer, useEffect, useCallback } from 'react';
 import { api, getToken, setToken, removeToken } from '../services/api';
+import { trackEvent } from '../services/analytics';
 
 export const AuthContext = createContext();
 
@@ -92,6 +93,7 @@ export function AuthProvider({ children }) {
         },
       });
       window.dispatchEvent(new Event('auth:login'));
+      trackEvent('sign_up', { method: 'email' });
       return response;
     } catch (error) {
       dispatch({ type: 'LOGIN_ERROR', payload: error.message });
@@ -112,6 +114,7 @@ export function AuthProvider({ children }) {
         },
       });
       window.dispatchEvent(new Event('auth:login'));
+      trackEvent('login', { method: 'email' });
       return response;
     } catch (error) {
       dispatch({ type: 'LOGIN_ERROR', payload: error.message });

@@ -6,8 +6,10 @@ import Pagination from '../components/common/Pagination';
 import SEO from '../components/common/SEO';
 import ShareButtons from '../components/common/ShareButtons';
 import ArticleCard from '../components/blog/ArticleCard';
+import ErrorState from '../components/ErrorState';
 import { useArticles } from '../hooks/useFilms';
 import { api } from '../services/api';
+import { ensureDirectDetailBackStack, useListScrollRestoration } from '../utils/navigation';
 
 const BlogPage = () => {
   const { slug } = useParams();
@@ -19,14 +21,15 @@ const BlogPage = () => {
   const [categories, setCategories] = useState([]);
   const [articleLoading, setArticleLoading] = useState(Boolean(slug));
 
-  const { data: listData, loading } = useArticles({
+  const { data: listData, loading, error: listError } = useArticles({
     page: slug ? undefined : page,
     limit: 10,
     category: category || undefined,
   });
+  useListScrollRestoration(!slug && !loading);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    if (slug) ensureDirectDetailBackStack({ detailPath: `/actualites/${slug}`, listPath: '/actualites' });
   }, [slug]);
 
   // Fetch single article if slug provided
@@ -212,6 +215,8 @@ const BlogPage = () => {
       {/* Articles List */}
       {loading ? (
         <LoadingSpinner />
+      ) : listError ? (
+        <ErrorState message="Impossible de charger les articles pour le moment. Réessayez dans quelques instants." />
       ) : articles.length > 0 ? (
         <>
           <div className="space-y-6">

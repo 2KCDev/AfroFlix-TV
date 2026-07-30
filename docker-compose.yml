@@ -16,6 +16,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   backend:
     image: afroflix-tv-backend
@@ -27,6 +32,7 @@ services:
       - ./backend/.env
     environment:
       NODE_ENV: production
+      DB_SSL: "false"
       DATABASE_URL: postgresql://${POSTGRES_USER:-afroflix_tv}:${POSTGRES_PASSWORD:-afroflix_tv123}@postgres:5432/${POSTGRES_DB:-afroflix_tv_db}
       PORT: 5000
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set for deployment}
@@ -42,6 +48,12 @@ services:
       EMAIL_CONTACT: ${EMAIL_CONTACT:-contact@afroflix-tv.com}
       EMAIL_CONTACT_RECIPIENTS: ${EMAIL_CONTACT_RECIPIENTS:-contact@afroflix-tv.com,support@afroflix-tv.com,admin@afroflix-tv.com,info@afroflix-tv.com}
       EMAIL_INTERNAL_RECIPIENTS: ${EMAIL_INTERNAL_RECIPIENTS:-contact@afroflix-tv.com,support@afroflix-tv.com,admin@afroflix-tv.com,info@afroflix-tv.com}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000/oauth2callback}
+      GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
+      GSC_SITE_URL: ${GSC_SITE_URL:-}
     ports:
       - "5000:5000"
     volumes:
@@ -54,6 +66,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   frontend:
     image: afroflix-tv-frontend
@@ -64,6 +81,7 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_GOOGLE_SITE_VERIFICATION: ${VITE_GOOGLE_SITE_VERIFICATION:-}
         VITE_GOOGLE_ANALYTICS_ID: ${VITE_GOOGLE_ANALYTICS_ID:-}
+        VITE_GA4_MEASUREMENT_ID: ${GA4_MEASUREMENT_ID:-}
         VITE_GOOGLE_ADSENSE_CLIENT_ID: ${VITE_GOOGLE_ADSENSE_CLIENT_ID:-}
         VITE_GOOGLE_ADSENSE_ENABLED: ${VITE_GOOGLE_ADSENSE_ENABLED:-false}
     container_name: afroflix-tv-frontend
@@ -78,6 +96,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   postgres_data:

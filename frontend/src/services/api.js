@@ -1,6 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const GET_CACHE = new Map();
+const GET_IN_FLIGHT = new Map();
 const DEFAULT_GET_CACHE_TTL = 30000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
+const DEFAULT_GET_RETRIES = 3;
 
 // Token management
 const getToken = () => localStorage.getItem('token');
@@ -15,14 +18,20 @@ const queryString = (params = {}) => {
   return query ? `?${query}` : '';
 };
 
-async function request(path, options = {}) {
-  const { cacheTtl, ...fetchOptions } = options;
+async function performRequest(path, options = {}) {
+  const {
+    cacheTtl,
+    retries = DEFAULT_GET_RETRIES,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    ...fetchOptions
+  } = options;
   const method = fetchOptions.method || 'GET';
   const cacheKey = `${method}:${path}`;
   const isFormData = fetchOptions.body instanceof FormData;
+  const canRetry = method === 'GET';
+  const cached = GET_CACHE.get(cacheKey);
 
   if (method === 'GET' && cacheTtl) {
-    const cached = GET_CACHE.get(cacheKey);
     if (cached && cached.expires > Date.now()) {
       return cached.data;
     }
@@ -39,33 +48,76 @@ async function request(path, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      ...fetchOptions,
-      headers,
-    });
+  for (let attempt = 0; ; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
-    const data = await response.json().catch(() => ({}));
-    
-    if (!response.ok) {
-      // Handle 401 - token expired/invalid
-      if (response.status === 401) {
-        removeToken();
-        window.dispatchEvent(new Event('auth:logout'));
-      }
-      throw new Error(data.error || `Erreur ${response.status}`);
-    }
-    if (method === 'GET' && cacheTtl) {
-      GET_CACHE.set(cacheKey, {
-        data,
-        expires: Date.now() + cacheTtl,
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...fetchOptions,
+        headers,
+        signal: controller.signal,
       });
-    }
+      const data = await response.json().catch(() => ({}));
 
-    return data;
-  } catch (error) {
-    console.error(`[API Error] ${path}:`, error.message);
-    throw error;
+      if (!response.ok) {
+        if (response.status === 401) {
+          removeToken();
+          window.dispatchEvent(new Event('auth:logout'));
+        }
+
+        const error = new Error(data.error || `Erreur ${response.status}`);
+        error.status = response.status;
+        // A validation or permission error cannot be fixed by retrying.
+        error.retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+        throw error;
+      }
+
+      if (method === 'GET' && cacheTtl) {
+        GET_CACHE.set(cacheKey, { data, expires: Date.now() + cacheTtl });
+      }
+      return data;
+    } catch (error) {
+      const retryable = error.retryable !== false && (!error.status || error.retryable);
+      if (canRetry && retryable && attempt < retries) {
+        // 350 ms, 700 ms, 1400 ms: brief retries absorb temporary proxy/db hiccups.
+        await new Promise((resolve) => window.setTimeout(resolve, 350 * (2 ** attempt)));
+        continue;
+      }
+
+      // A stale successful response is preferable to replacing a populated page
+      // with a misleading "Aucun élément" state during a transient outage.
+      if (canRetry && cached?.data) {
+        console.warn(`[API] stale cache used for ${path}:`, error.message);
+        return cached.data;
+      }
+
+      console.error(`[API Error] ${path}:`, error.message);
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+}
+
+// Several components can request the same public list during one render.
+// Share that network request instead of multiplying work for Nginx/PostgreSQL.
+async function request(path, options = {}) {
+  const method = options.method || 'GET';
+  if (method !== 'GET') return performRequest(path, options);
+
+  const cacheKey = `${method}:${path}`;
+  const existing = GET_IN_FLIGHT.get(cacheKey);
+  if (existing) return existing;
+
+  const pending = performRequest(path, options);
+  GET_IN_FLIGHT.set(cacheKey, pending);
+  try {
+    return await pending;
+  } finally {
+    if (GET_IN_FLIGHT.get(cacheKey) === pending) {
+      GET_IN_FLIGHT.delete(cacheKey);
+    }
   }
 }
 

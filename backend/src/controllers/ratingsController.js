@@ -13,46 +13,59 @@ const rateFilm = async (req, res) => {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
 
-    // Check if film exists
-    const filmCheck = await pool.query('SELECT id, average_rating FROM films WHERE id = $1', [film_id]);
-    if (!filmCheck.rows.length) {
-      return res.status(404).json({ error: 'Film not found' });
-    }
-
-    const existingRating = userId
-      ? await pool.query(
-        `SELECT id FROM ratings WHERE film_id = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT 1`,
-        [film_id, userId]
-      )
-      : await pool.query(
-        `SELECT id FROM ratings
-         WHERE film_id = $1 AND user_id IS NULL AND ip_address = $2
-         ORDER BY created_at DESC LIMIT 1`,
-        [film_id, ip]
-      );
-
+    const client = await pool.connect();
     let result;
-    if (existingRating.rows.length > 0) {
-      return res.status(409).json({ error: 'You have already rated this film' });
-    } else {
-      result = await pool.query(
+    try {
+      await client.query('BEGIN');
+      // Locking the film row serializes its counters without scanning every
+      // historical vote (which becomes very expensive as ratings grow).
+      const filmCheck = await client.query(
+        'SELECT id FROM films WHERE id = $1 FOR UPDATE',
+        [film_id]
+      );
+      if (!filmCheck.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Film not found' });
+      }
+
+      const existingRating = userId
+        ? await client.query(
+          `SELECT id FROM ratings WHERE film_id = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT 1`,
+          [film_id, userId]
+        )
+        : await client.query(
+          `SELECT id FROM ratings
+           WHERE film_id = $1 AND user_id IS NULL AND ip_address = $2
+           ORDER BY created_at DESC LIMIT 1`,
+          [film_id, ip]
+        );
+      if (existingRating.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'You have already rated this film' });
+      }
+
+      result = await client.query(
         `INSERT INTO ratings (film_id, user_id, rating_value, ip_address)
          VALUES ($1, $2, $3, $4)
          RETURNING *`,
         [film_id, userId, ratingValue, ip]
       );
+      await client.query(
+        `UPDATE films
+         SET rating_sum = rating_sum + $1,
+             rating_count = rating_count + 1,
+             average_rating = ROUND((rating_sum + $1)::numeric / (rating_count + 1), 2),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [ratingValue, film_id]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
     }
-
-    // Update average rating
-    const avgResult = await pool.query(
-      `SELECT AVG(rating_value)::DECIMAL(3,2) as avg FROM ratings WHERE film_id = $1`,
-      [film_id]
-    );
-
-    await pool.query(
-      `UPDATE films SET average_rating = $1 WHERE id = $2`,
-      [avgResult.rows[0].avg || 0, film_id]
-    );
 
     res.status(201).json({
       message: 'Rating submitted successfully',

@@ -99,7 +99,9 @@ const schemas = {
 
   film: Joi.object({
     title: Joi.string().trim().min(2).max(255).required(),
-    slug: Joi.string().trim().lowercase().max(30).pattern(SLUG_PATTERN).optional(),
+    // The editor may enter a human-readable identifier with any characters;
+    // the controller normalises it safely into the final URL slug.
+    slug: Joi.string().trim().max(255).optional(),
     description: Joi.string().trim().min(300).max(10000).required(),
     poster_url: Joi.string().trim().max(500).allow('', null).custom((value, helpers) => (
       isPublicAssetUrl(value) ? trimString(value) : helpers.message('URL affiche invalide.')
@@ -117,7 +119,7 @@ const schemas = {
 
   filmUpdate: Joi.object({
     title: Joi.string().trim().min(2).max(255),
-    slug: Joi.string().trim().lowercase().max(30).pattern(SLUG_PATTERN),
+    slug: Joi.string().trim().max(255),
     description: Joi.string().trim().min(300).max(10000),
     poster_url: Joi.string().trim().max(500).allow('', null).custom((value, helpers) => (
       isPublicAssetUrl(value) ? trimString(value) : helpers.message('URL affiche invalide.')

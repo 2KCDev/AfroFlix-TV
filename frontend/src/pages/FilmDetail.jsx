@@ -9,6 +9,8 @@ import StarRating from '../components/common/StarRating';
 import { useFilmDetail } from '../hooks/useFilms';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { trackEvent } from '../services/analytics';
+import { ensureDirectDetailBackStack } from '../utils/navigation';
 
 const getYouTubeEmbedUrl = (value) => {
   if (!value) return '';
@@ -48,6 +50,8 @@ const withAutoplay = (value) => {
     url.searchParams.set('playsinline', '1');
     url.searchParams.set('rel', '0');
     url.searchParams.set('modestbranding', '1');
+    url.searchParams.set('enablejsapi', '1');
+    url.searchParams.set('origin', window.location.origin);
     return url.href;
   } catch {
     return value;
@@ -56,45 +60,7 @@ const withAutoplay = (value) => {
 
 const YOUTUBE_OFFLINE_MESSAGE = 'Veuillez vérifier votre connexion Internet, puis réessayer.';
 const YOUTUBE_CONNECTIVITY_URL = 'https://www.youtube.com/generate_204';
-
-const ensureDirectFilmBackTarget = (slug) => {
-  if (typeof window === 'undefined' || !slug) return;
-
-  const state = window.history.state || {};
-  const routerState = state.usr || {};
-  const isInitialAppEntry = typeof state.idx === 'number' ? state.idx === 0 : window.history.length <= 1;
-
-  if (!isInitialAppEntry || routerState.afroflixFilmBackTarget) return;
-
-  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  const nextIndex = typeof state.idx === 'number' ? state.idx + 1 : state.idx;
-
-  window.history.replaceState(
-    {
-      ...state,
-      usr: {
-        ...routerState,
-        afroflixFilmBackTarget: true,
-      },
-    },
-    '',
-    '/films'
-  );
-
-  window.history.pushState(
-    {
-      ...state,
-      idx: nextIndex,
-      usr: {
-        ...routerState,
-        afroflixFilmBackTarget: true,
-        afroflixFilmSlug: slug,
-      },
-    },
-    '',
-    currentUrl
-  );
-};
+const playbackStorageKey = (videoUrl) => `afroflix:playback:${videoUrl}`;
 
 const FilmDetail = () => {
   const { slug } = useParams();
@@ -102,6 +68,7 @@ const FilmDetail = () => {
   const { isAuthenticated, user } = useAuth();
   const { data: film, loading } = useFilmDetail(slug);
   const videoFrameRef = useRef(null);
+  const lastVideoTimeRef = useRef(0);
 
   const [ratingStats, setRatingStats] = useState(null);
   const [comments, setComments] = useState([]);
@@ -134,7 +101,16 @@ const FilmDetail = () => {
   const videoUrl = film ? getYouTubeEmbedUrl(film.youtube_embed_url || film.youtubeEmbedUrl || film.video_url) : '';
 
   useEffect(() => {
-    ensureDirectFilmBackTarget(slug);
+    if (!videoUrl) {
+      lastVideoTimeRef.current = 0;
+      return;
+    }
+    const savedPosition = Number(sessionStorage.getItem(playbackStorageKey(videoUrl)) || 0);
+    lastVideoTimeRef.current = Number.isFinite(savedPosition) && savedPosition > 0 ? savedPosition : 0;
+  }, [videoUrl]);
+
+  useEffect(() => {
+    ensureDirectDetailBackStack({ detailPath: `/films/${slug}`, listPath: '/films' });
   }, [slug]);
 
   useEffect(() => {
@@ -211,6 +187,53 @@ const FilmDetail = () => {
     setVideoRetryKey((key) => key + 1);
   };
 
+  const sendYouTubeCommand = (func, args = []) => {
+    videoFrameRef.current?.querySelector('iframe')?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func, args }),
+      'https://www.youtube.com'
+    );
+  };
+
+  useEffect(() => {
+    if (!videoUrl) return undefined;
+
+    const receivePlayerMessage = (event) => {
+      if (!/https:\/\/(www\.)?youtube(-nocookie)?\.com$/.test(event.origin)) return;
+      let payload;
+      try {
+        payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      } catch {
+        return;
+      }
+      const currentTime = payload?.info?.currentTime;
+      if (Number.isFinite(currentTime) && currentTime > 0) {
+        lastVideoTimeRef.current = currentTime;
+        sessionStorage.setItem(playbackStorageKey(videoUrl), String(currentTime));
+      }
+    };
+
+    const savePlaybackPosition = () => sendYouTubeCommand('getCurrentTime');
+    window.addEventListener('message', receivePlayerMessage);
+    window.addEventListener('offline', savePlaybackPosition);
+    const interval = window.setInterval(savePlaybackPosition, 4000);
+    return () => {
+      savePlaybackPosition();
+      if (lastVideoTimeRef.current > 0) {
+        sessionStorage.setItem(playbackStorageKey(videoUrl), String(lastVideoTimeRef.current));
+      }
+      window.clearInterval(interval);
+      window.removeEventListener('message', receivePlayerMessage);
+      window.removeEventListener('offline', savePlaybackPosition);
+    };
+  }, [videoUrl, videoAccessStatus]);
+
+  const resumeYouTubePlayback = () => {
+    window.setTimeout(() => {
+      if (lastVideoTimeRef.current > 0) sendYouTubeCommand('seekTo', [lastVideoTimeRef.current, true]);
+      sendYouTubeCommand('playVideo');
+    }, 450);
+  };
+
   // Fetch rating stats and comments when film loads
   useEffect(() => {
     if (!film) return;
@@ -247,6 +270,10 @@ const FilmDetail = () => {
     // Record view
     api.recordView(film.id).catch(console.error);
   }, [film, isAuthenticated]);
+
+  useEffect(() => {
+    if (film) trackEvent('view_item', { items: [{ item_id: String(film.id), item_name: film.title, item_category: 'film' }] });
+  }, [film?.id]);
 
   useEffect(() => {
     if (!commentsOpen) return undefined;
@@ -349,8 +376,10 @@ const FilmDetail = () => {
     try {
       if (isFavorited) {
         await api.removeFavorite(film.id);
+        trackEvent('remove_from_wishlist', { items: [{ item_id: String(film.id), item_name: film.title }] });
       } else {
         await api.addFavorite(film.id);
+        trackEvent('add_to_wishlist', { items: [{ item_id: String(film.id), item_name: film.title }] });
       }
       setIsFavorited(!isFavorited);
     } catch (error) {
@@ -704,6 +733,10 @@ const FilmDetail = () => {
                   className="h-full w-full border-0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
+                  onLoad={() => {
+                    resumeYouTubePlayback();
+                    trackEvent('video_start', { video_title: film.title, video_provider: 'youtube' });
+                  }}
                 />
               ) : videoAccessStatus === 'checking' ? (
                 <div className="flex h-full w-full items-center justify-center bg-gray-950 p-6 text-center">
@@ -800,6 +833,7 @@ const FilmDetail = () => {
                 href={film.youtube_embed_url || film.video_url || videoUrl}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => trackEvent('click', { link_type: 'official_video', film_id: String(film.id), film_title: film.title })}
                 className="inline-flex items-center gap-2 text-green-800 font-semibold hover:text-green-900"
               >
                 Vidéo officielle disponible <FiExternalLink size={16} />

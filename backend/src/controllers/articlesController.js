@@ -1,6 +1,6 @@
 const pool = require('../db/pool');
 const { deleteReplacedManagedImage } = require('../services/cloudinaryService');
-const { sendArticleNotificationEmail } = require('../services/emailService');
+const { queueArticleNotificationEmails } = require('../services/emailService');
 const { parsePositiveInt, schemas, validatePayload } = require('../utils/validation');
 
 const articleSlugify = (value = '') => value
@@ -12,49 +12,11 @@ const articleSlugify = (value = '') => value
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
 
-const getFrontendUrl = () => (
-  process.env.FRONTEND_URL || process.env.APP_URL || 'https://www.afroflix-tv.com'
-).replace(/\/$/, '');
-
-const makeExcerpt = (content = '') => String(content)
-  .replace(/<[^>]*>/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim()
-  .slice(0, 220);
-
 const notifyNewsletterSubscribers = async (article) => {
   try {
-    const result = await pool.query(
-      `SELECT id, email, unsubscribe_token
-       FROM newsletter_subscribers
-       WHERE status = 'subscribed'
-       ORDER BY subscribed_at DESC
-       LIMIT 1000`
-    );
-
-    if (!result.rows.length) return;
-
-    const url = `${getFrontendUrl()}/actualites/${article.slug}`;
-    const excerpt = makeExcerpt(article.content);
-    const deliveries = await Promise.allSettled(
-      result.rows.map((subscriber) => sendArticleNotificationEmail({
-        to: subscriber.email,
-        title: article.title,
-        excerpt,
-        url,
-        unsubscribeToken: subscriber.unsubscribe_token,
-      }).then(() => pool.query(
-        'UPDATE newsletter_subscribers SET last_notified_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [subscriber.id]
-      )))
-    );
-
-    const failedCount = deliveries.filter((delivery) => delivery.status === 'rejected').length;
-    if (failedCount > 0) {
-      console.error(`[email] newsletter article notification failed for ${failedCount} subscriber(s)`);
-    }
+    await queueArticleNotificationEmails(article);
   } catch (err) {
-    console.error('[email] newsletter article notification failed:', err.message);
+    console.error('[email] newsletter article queueing failed:', err.message);
   }
 };
 
@@ -143,8 +105,10 @@ const getAllArticles = async (req, res) => {
     query += ` ORDER BY published_at DESC NULLS LAST LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(pageSize, offset);
 
-    const result = await pool.query(query, params);
-    const countResult = await pool.query(countQuery, params.slice(0, -2));
+    const [result, countResult] = await Promise.all([
+      pool.query(query, params),
+      pool.query(countQuery, params.slice(0, -2)),
+    ]);
 
     res.json({
       articles: result.rows,
@@ -204,9 +168,10 @@ const createArticle = async (req, res) => {
       [title, slug, content, category, featured_image, author || 'Rédaction AfroFlix.TV', 'published', req.user.id]
     );
 
-    notifyNewsletterSubscribers(result.rows[0]);
-
     res.status(201).json({ message: 'Article created successfully', article: result.rows[0] });
+
+    // The HTTP response is never held by the volume of newsletter recipients.
+    setImmediate(() => notifyNewsletterSubscribers(result.rows[0]));
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'An article with this slug already exists' });

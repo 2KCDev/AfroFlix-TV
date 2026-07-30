@@ -240,7 +240,7 @@ const AdminContentManager = ({ user }) => {
           const upload = await api.uploadImage(imageFiles.film, 'film');
           payload.poster_url = upload.url;
         }
-        payload.slug = payload.slug?.trim().slice(0, 30) || '';
+        payload.slug = payload.slug?.trim().slice(0, 255) || '';
         payload.poster_url = payload.poster_url?.trim() || '';
         payload.youtube_embed_url = payload.youtube_embed_url?.trim() || '';
         editing ? await api.updateFilm(editing.id, payload) : await api.createFilm(payload);
@@ -677,12 +677,12 @@ const SlugInput = ({ label, value, onChange, required }) => {
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
-        maxLength={30}
+        maxLength={255}
         placeholder="exemple: mon-film-special"
         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
       />
       <span className="mt-1 block text-xs text-gray-500">
-        URL finale: /films/{slug || 'votre-mot'} · {slug.length}/30
+        URL finale normalisée: /films/{previewSlug(slug) || 'votre-mot'} · {slug.length}/255
       </span>
     </label>
   );

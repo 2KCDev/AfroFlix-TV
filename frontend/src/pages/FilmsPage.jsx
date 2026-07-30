@@ -7,8 +7,10 @@ import Pagination from '../components/common/Pagination';
 import SEO from '../components/common/SEO';
 import SearchSuggest from '../components/common/SearchSuggest';
 import FilmGrid from '../components/films/FilmGrid';
+import ErrorState from '../components/ErrorState';
 import { useFilms } from '../hooks/useFilms';
 import { api } from '../services/api';
+import { useListScrollRestoration } from '../utils/navigation';
 
 const FilmsPage = () => {
   const { genre: genreSlugFromRoute } = useParams();
@@ -35,7 +37,8 @@ const FilmsPage = () => {
     ...(year && { year: parseInt(year) }),
   };
 
-  const { data: filmsData, loading } = useFilms(params);
+  const { data: filmsData, loading, error } = useFilms(params);
+  useListScrollRestoration(!loading);
   const films = filmsData?.films || [];
   const totalPages = filmsData?.totalPages || 1;
 
@@ -45,10 +48,6 @@ const FilmsPage = () => {
       .then((res) => setGenres(res.genres || (Array.isArray(res) ? res : [])))
       .catch((err) => console.error('Error fetching genres:', err));
   }, []);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [page]);
 
   useEffect(() => {
     setKeywordTerm(q);
@@ -198,6 +197,8 @@ const FilmsPage = () => {
           {/* Films Grid */}
           {loading ? (
             <LoadingSpinner />
+          ) : error ? (
+            <ErrorState message="Impossible de charger les films pour le moment. Réessayez dans quelques instants." />
           ) : films.length > 0 ? (
             <>
               <FilmGrid films={films} columns="dense" />

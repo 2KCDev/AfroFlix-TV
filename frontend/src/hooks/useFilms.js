@@ -1,6 +1,38 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
+const useRemoteList = (load, normalize, dependencies) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const result = await load();
+        if (!active) return;
+        setData(normalize(result));
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+        // Keep the previous successful result visible. A network incident must
+        // never be presented to visitors as an empty catalogue.
+        setError(err.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => { active = false; };
+  }, dependencies);
+
+  return { data, loading, error };
+};
+
 const normalizePagination = (pagination = {}) => ({
   total: Number(pagination.total || 0),
   page: Number(pagination.page || 1),
@@ -61,55 +93,16 @@ const normalizeFilmParams = (params) => {
 };
 
 export const useFilms = (params = {}) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchFilms = async () => {
-      try {
-        setLoading(true);
-        const result = await api.films(normalizeFilmParams(params));
-        setData(normalizeFilmList(result));
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFilms();
-  }, [JSON.stringify(params)]);
-
-  return { data, loading, error };
+  const paramsKey = JSON.stringify(params);
+  return useRemoteList(
+    () => api.films(normalizeFilmParams(params)),
+    normalizeFilmList,
+    [paramsKey]
+  );
 };
 
 export const useTrendingFilms = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchTrending = async () => {
-      try {
-        setLoading(true);
-        const result = await api.trending();
-        setData(normalizeFilmList(result));
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrending();
-  }, []);
-
-  return { data, loading, error };
+  return useRemoteList(() => api.trending(), normalizeFilmList, []);
 };
 
 export const useFilmDetail = (slug) => {
@@ -128,7 +121,6 @@ export const useFilmDetail = (slug) => {
         setError(null);
       } catch (err) {
         setError(err.message);
-        setData(null);
       } finally {
         setLoading(false);
       }
@@ -141,57 +133,15 @@ export const useFilmDetail = (slug) => {
 };
 
 export const useActors = (params = {}) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchActors = async () => {
-      try {
-        setLoading(true);
-        const result = await api.actors({
-          ...params,
-          search: params.search || params.q,
-          q: undefined,
-        });
-        setData(normalizeActorList(result));
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchActors();
-  }, [JSON.stringify(params)]);
-
-  return { data, loading, error };
+  const paramsKey = JSON.stringify(params);
+  return useRemoteList(
+    () => api.actors({ ...params, search: params.search || params.q, q: undefined }),
+    normalizeActorList,
+    [paramsKey]
+  );
 };
 
 export const useArticles = (params = {}) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        setLoading(true);
-        const result = await api.articles(params);
-        setData(normalizeArticleList(result));
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchArticles();
-  }, [JSON.stringify(params)]);
-
-  return { data, loading, error };
+  const paramsKey = JSON.stringify(params);
+  return useRemoteList(() => api.articles(params), normalizeArticleList, [paramsKey]);
 };

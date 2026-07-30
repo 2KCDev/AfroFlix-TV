@@ -20,6 +20,7 @@ import RankingsPage from './pages/RankingsPage';
 import ReviewsPage from './pages/ReviewsPage';
 import CookieConsent from './components/common/CookieConsent';
 import GoogleTags from './components/common/GoogleTags';
+import AnalyticsPageView from './components/common/AnalyticsPageView';
 import PageJumpButton from './components/common/PageJumpButton';
 
 function AppContent() {
@@ -73,6 +74,7 @@ function AppContent() {
       </main>
       <Footer />
       <GoogleTags />
+      <AnalyticsPageView />
       <PageJumpButton />
       <CookieConsent />
     </div>

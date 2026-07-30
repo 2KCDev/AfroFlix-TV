@@ -1,6 +1,55 @@
 const pool = require('./pool');
 
 const ensureDatabaseReady = async () => {
+  // Keep migrations idempotent: this function also runs safely against an
+  // already populated production database.
+  await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+
+  await pool.query(`
+    ALTER TABLE films
+      ADD COLUMN IF NOT EXISTS rating_sum INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS rating_count INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS youtube_video_id VARCHAR(255)
+  `);
+
+  // Import the historical ratings once. New ratings maintain these counters
+  // atomically, avoiding a full AVG() scan on every vote.
+  await pool.query(`
+    UPDATE films f
+    SET rating_sum = source.rating_sum,
+        rating_count = source.rating_count,
+        average_rating = ROUND(source.rating_sum::numeric / NULLIF(source.rating_count, 0), 2)
+    FROM (
+      SELECT film_id, SUM(rating_value)::int AS rating_sum, COUNT(*)::int AS rating_count
+      FROM ratings
+      GROUP BY film_id
+    ) source
+    WHERE f.id = source.film_id
+      AND f.rating_count = 0
+      -- Some historical imports predate the duration constraint. Updating
+      -- those rows would make PostgreSQL reject the whole startup migration.
+      AND (f.duration IS NULL OR f.duration BETWEEN 1 AND 600)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_views_film_ip_timestamp
+      ON views(film_id, ip_address, timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_films_public_latest
+      ON films(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_films_public_popular
+      ON films(status, views DESC);
+    CREATE INDEX IF NOT EXISTS idx_articles_public_published
+      ON articles(status, published_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_ratings_film_created
+      ON ratings(film_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_films_search_trgm
+      ON films USING GIN ((coalesce(title, '') || ' ' || coalesce(director, '') || ' ' || coalesce(country, '')) gin_trgm_ops);
+    CREATE INDEX IF NOT EXISTS idx_articles_search_trgm
+      ON articles USING GIN ((coalesce(title, '') || ' ' || coalesce(category, '') || ' ' || coalesce(author, '')) gin_trgm_ops);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_films_youtube_video_id_unique
+      ON films(youtube_video_id)
+      WHERE youtube_video_id IS NOT NULL AND youtube_video_id <> '';
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS contact_messages (
       id SERIAL PRIMARY KEY,

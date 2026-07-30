@@ -3,7 +3,7 @@ const pool = require('../db/pool');
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const PLACEHOLDER_RESEND_KEY = /^re_x+$/i;
 const EMAIL_QUEUE_INTERVAL_MS = Number(process.env.EMAIL_QUEUE_INTERVAL_MS || 60_000);
-const EMAIL_QUEUE_BATCH_SIZE = Number(process.env.EMAIL_QUEUE_BATCH_SIZE || 10);
+const EMAIL_QUEUE_BATCH_SIZE = Number(process.env.EMAIL_QUEUE_BATCH_SIZE || 50);
 const EMAIL_QUEUE_MAX_ATTEMPTS = Number(process.env.EMAIL_QUEUE_MAX_ATTEMPTS || 8);
 
 const EMAILS = {
@@ -233,6 +233,59 @@ const enqueueEmail = async (type, payload, error) => {
   return result.rows[0];
 };
 
+// Newsletter delivery is deliberately queued before contacting the provider.
+// Publishing an article must remain fast even with tens of thousands of readers.
+const queueArticleNotificationEmails = async ({ title, content, slug }) => {
+  const subscribers = await pool.query(
+    `SELECT id, email, unsubscribe_token
+     FROM newsletter_subscribers
+     WHERE status = 'subscribed'
+     ORDER BY id ASC`
+  );
+
+  if (!subscribers.rows.length) return { queued: 0 };
+
+  const url = `${getFrontendUrl()}/actualites/${slug}`;
+  const excerpt = String(content || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 220);
+
+  const queueRows = subscribers.rows.map((subscriber) => ({
+    subscriberId: subscriber.id,
+    payload: buildArticleNotificationPayload({
+      to: subscriber.email,
+      title,
+      excerpt,
+      url,
+      unsubscribeToken: subscriber.unsubscribe_token,
+      subscriberId: subscriber.id,
+    }),
+  }));
+
+  // Batches keep the SQL request and PostgreSQL parameter count bounded.
+  const batchSize = 250;
+  for (let start = 0; start < queueRows.length; start += batchSize) {
+    const batch = queueRows.slice(start, start + batchSize);
+    const values = [];
+    const params = [];
+    batch.forEach((row, index) => {
+      const offset = index * 2;
+      values.push(`($${offset + 1}, $${offset + 2}::jsonb)`);
+      params.push('article_notification', JSON.stringify(row.payload));
+    });
+    await pool.query(
+      `INSERT INTO email_outbox (type, payload, next_attempt_at)
+       VALUES ${values.join(', ')}`,
+      params
+    );
+  }
+
+  console.info('[email] newsletter notifications queued:', { article: slug, count: queueRows.length });
+  return { queued: queueRows.length };
+};
+
 const sendEmailWithQueue = async (type, payload) => {
   try {
     const result = await sendEmail(payload);
@@ -305,6 +358,12 @@ const processEmailQueueBatch = async (limit = EMAIL_QUEUE_BATCH_SIZE) => {
          WHERE id = $1`,
         [item.id, getProviderMessageId(result)]
       );
+      if (item.type === 'article_notification' && payload.subscriberId) {
+        await pool.query(
+          'UPDATE newsletter_subscribers SET last_notified_at = CURRENT_TIMESTAMP WHERE id = $1',
+          [payload.subscriberId]
+        );
+      }
       console.info('[email] queued email sent:', { id: item.id, type: item.type });
     } catch (err) {
       const attempts = Number(item.attempts || 0) + 1;
@@ -472,7 +531,7 @@ const sendNewsletterInternalNotification = ({ email }) => sendEmailWithQueue('ne
   text: `Nouvelle inscription newsletter: ${email}`,
 });
 
-const sendArticleNotificationEmail = ({ to, title, excerpt, url, unsubscribeToken }) => {
+const buildArticleNotificationPayload = ({ to, title, excerpt, url, unsubscribeToken, subscriberId }) => {
   const unsubscribeUrl = `${getFrontendUrl()}/api/newsletter/unsubscribe/${encodeURIComponent(unsubscribeToken)}`;
   const html = renderLayout({
     title,
@@ -486,13 +545,18 @@ const sendArticleNotificationEmail = ({ to, title, excerpt, url, unsubscribeToke
     `,
   });
 
-  return sendEmailWithQueue('article_notification', {
+  return {
     from: `${brandName} Actualités <${EMAILS.info}>`,
     to,
     subject: `${brandName} - ${title}`,
     html,
     text: `${title}\n${excerpt || ''}\nLire: ${url}\nDésinscription: ${unsubscribeUrl}`,
-  });
+    ...(subscriberId ? { subscriberId } : {}),
+  };
+};
+
+const sendArticleNotificationEmail = (input) => {
+  return sendEmailWithQueue('article_notification', buildArticleNotificationPayload(input));
 };
 
 const sendDiagnosticEmail = ({ to }) => {
@@ -518,6 +582,7 @@ module.exports = {
   INTERNAL_RECIPIENTS,
   getEmailStatus,
   processEmailQueueBatch,
+  queueArticleNotificationEmails,
   sendArticleNotificationEmail,
   sendContactConfirmation,
   sendContactNotification,

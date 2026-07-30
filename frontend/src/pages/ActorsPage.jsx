@@ -5,6 +5,8 @@ import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Pagination from '../components/common/Pagination';
 import SearchSuggest from '../components/common/SearchSuggest';
+import ErrorState from '../components/ErrorState';
+import { useListScrollRestoration } from '../utils/navigation';
 import { useActors } from '../hooks/useFilms';
 
 const ActorsPage = () => {
@@ -12,18 +14,15 @@ const ActorsPage = () => {
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const page = parseInt(searchParams.get('page') || '1');
 
-  const { data: actorsData, loading } = useActors({
+  const { data: actorsData, loading, error } = useActors({
     page,
     limit: 12,
     search: searchParams.get('q') || '',
   });
+  useListScrollRestoration(!loading);
 
   const actors = actorsData?.actors || [];
   const totalPages = actorsData?.totalPages || 1;
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [page]);
 
   const handleSearch = useCallback((term = searchTerm) => {
     const newParams = new URLSearchParams({ page: '1' });
@@ -56,6 +55,8 @@ const ActorsPage = () => {
       {/* Actors Grid */}
       {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <ErrorState message="Impossible de charger les acteurs pour le moment. Réessayez dans quelques instants." />
       ) : actors.length > 0 ? (
         <>
           <ActorGrid actors={actors} />

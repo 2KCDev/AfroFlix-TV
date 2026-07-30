@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import FilmCard from '../components/cards/FilmCard';
 import SearchSuggest from '../components/common/SearchSuggest';
 import { api } from '../services/api';
+import { trackEvent } from '../services/analytics';
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,6 +51,7 @@ const SearchPage = () => {
       }, { films: [], actors: [], articles: [] });
 
       setResults(merged);
+      if (cleanTerm.length >= 2) trackEvent('search', { search_term: cleanTerm, result_count: merged.films.length + merged.actors.length + merged.articles.length });
       setSearchParams({
         ...(cleanTerm && { q: cleanTerm }),
         ...(genre && { genre }),

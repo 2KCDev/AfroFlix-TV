@@ -2,6 +2,15 @@ const pool = require('../db/pool');
 const { deleteReplacedManagedImage } = require('../services/cloudinaryService');
 const { schemas, validatePayload } = require('../utils/validation');
 
+const slugify = (value = '') => value
+  .toString()
+  .trim()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
 let actorOwnershipMigration;
 
 const ensureActorManagementColumns = () => {
@@ -113,13 +122,11 @@ const getAllActors = async (req, res) => {
     const limitParamIndex = params.length + 1;
     query += ` ORDER BY name ASC LIMIT $${limitParamIndex} OFFSET $${limitParamIndex + 1}`;
 
-    const result = await pool.query(query, [...params, pageSize, offset]);
-
     let countQuery = `SELECT COUNT(*) FROM actors WHERE COALESCE(status, 'published') = 'published'`;
-    const countResult = await pool.query(
-      countQuery + (search ? ` AND name ILIKE $1` : ''),
-      params
-    );
+    const [result, countResult] = await Promise.all([
+      pool.query(query, [...params, pageSize, offset]),
+      pool.query(countQuery + (search ? ` AND name ILIKE $1` : ''), params),
+    ]);
 
     res.json({
       actors: result.rows,
@@ -201,8 +208,10 @@ const createActor = async (req, res) => {
       return res.status(409).json({ error: uniqueError });
     }
 
-    // Generate slug
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const slug = slugify(name);
+    if (!slug) {
+      return res.status(400).json({ error: 'Le nom de l’acteur ne peut pas produire une URL valide.' });
+    }
 
     const result = await pool.query(
       `INSERT INTO actors (name, slug, biography, birth_date, photo_url, created_by)

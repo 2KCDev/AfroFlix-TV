@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import FilmCard from '../components/cards/FilmCard';
 import SEO from '../components/common/SEO';
 import { api } from '../services/api';
+import { ensureDirectDetailBackStack } from '../utils/navigation';
 
 const ActorDetail = () => {
   const { slug } = useParams();
@@ -15,6 +16,7 @@ const ActorDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    ensureDirectDetailBackStack({ detailPath: `/acteurs/${slug}`, listPath: '/acteurs' });
     const fetchActor = async () => {
       try {
         const data = await api.actor(slug);

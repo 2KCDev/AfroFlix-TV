@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiSearch } from 'react-icons/fi';
 import { api } from '../../services/api';
+import { trackEvent } from '../../services/analytics';
 
 const typeLabels = {
   film: 'Film',
@@ -70,6 +71,7 @@ const SearchSuggest = ({
 
   const submit = (event) => {
     event.preventDefault();
+    if (term.length >= 2) trackEvent('search', { search_term: term });
     if (onSubmit) {
       onSubmit(value);
       return;
@@ -99,6 +101,7 @@ const SearchSuggest = ({
               <Link
                 key={`${item.type}-${item.id}`}
                 to={itemPath(item)}
+                onClick={() => trackEvent('select_content', { content_type: item.type, item_id: String(item.id), item_name: item.label })}
                 className="block px-4 py-3 text-sm hover:bg-red-50"
               >
                 <span className="font-semibold text-gray-900">{item.label}</span>
