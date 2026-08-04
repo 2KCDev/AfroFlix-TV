@@ -14,7 +14,7 @@ const allTabs = [
   { id: 'content', label: 'Contenus', icon: FiFileText, roles: ['admin', 'editor'] },
   { id: 'moderation', label: 'Modération', icon: FiMessageSquare, roles: ['admin', 'moderator'] },
   { id: 'users', label: 'Utilisateurs', icon: FiUsers, roles: ['admin'] },
-  { id: 'compliance', label: 'AdSense', icon: FiShield, roles: ['admin', 'editor', 'moderator'] },
+  { id: 'compliance', label: 'AdSense', icon: FiShield, roles: ['admin', 'moderator'] },
 ];
 
 const roleLabels = {

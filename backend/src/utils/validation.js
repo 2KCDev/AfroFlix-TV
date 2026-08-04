@@ -4,7 +4,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,128}$/;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const STATUS_VALUES = ['published', 'draft', 'archived'];
-const ARTICLE_CATEGORIES = ['Actualités', 'Classements', 'Analyses', 'Conseils'];
+const ARTICLE_CATEGORIES = ['Actualités', 'Classements', 'Analyses', 'Conseils', 'Dossiers', 'Portraits', 'Guides'];
 
 const trimString = (value) => (typeof value === 'string' ? value.trim() : value);
 
@@ -101,7 +101,9 @@ const schemas = {
     title: Joi.string().trim().min(2).max(255).required(),
     // The editor may enter a human-readable identifier with any characters;
     // the controller normalises it safely into the final URL slug.
-    slug: Joi.string().trim().max(255).optional(),
+    // A new film URL identifier must remain concise. Film updates retain the
+    // former limit so existing production records are not invalidated.
+    slug: Joi.string().trim().max(30).optional(),
     description: Joi.string().trim().min(300).max(10000).required(),
     poster_url: Joi.string().trim().max(500).allow('', null).custom((value, helpers) => (
       isPublicAssetUrl(value) ? trimString(value) : helpers.message('URL affiche invalide.')

@@ -12,8 +12,9 @@ const slugify = (value = '') => value
   .replace(/^-+|-+$/g, '');
 
 const MAX_FILM_SLUG_LENGTH = 255;
+const MAX_NEW_FILM_SLUG_LENGTH = 30;
 
-const normalizeFilmSlug = (value = '') => slugify(value).slice(0, MAX_FILM_SLUG_LENGTH).replace(/-+$/g, '');
+const normalizeFilmSlug = (value = '', maxLength = MAX_FILM_SLUG_LENGTH) => slugify(value).slice(0, maxLength).replace(/-+$/g, '');
 
 const normalizeOptionalUrl = (value) => {
   const clean = String(value || '').trim();
@@ -504,12 +505,12 @@ const createFilm = async (req, res) => {
     }
     const { title, slug: requestedSlug, description, poster_url, director, country, year, duration, youtube_embed_url, genres = [], actors = [] } = validation.value;
 
-    const slug = normalizeFilmSlug(requestedSlug || title);
+    const slug = normalizeFilmSlug(requestedSlug || title, MAX_NEW_FILM_SLUG_LENGTH);
     if (!slug) {
       return res.status(400).json({ error: 'Le nom d’URL du film est obligatoire.' });
     }
-    if (slug.length > MAX_FILM_SLUG_LENGTH) {
-      return res.status(400).json({ error: 'Le nom d’URL du film doit contenir 255 caractères maximum.' });
+    if (slug.length > MAX_NEW_FILM_SLUG_LENGTH) {
+      return res.status(400).json({ error: 'Le nom d’URL du film doit contenir 30 caractères maximum.' });
     }
 
     const normalizedYoutube = normalizeYoutubeUrl(youtube_embed_url);

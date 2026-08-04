@@ -43,7 +43,7 @@ const tabs = [
   { id: 'genre', label: 'Genres' },
 ];
 
-const categories = ['Actualités', 'Classements', 'Analyses', 'Conseils'];
+const categories = ['Actualités', 'Classements', 'Analyses', 'Conseils', 'Dossiers', 'Portraits', 'Guides'];
 
 const ContentTableFilters = ({
   search,
@@ -240,7 +240,7 @@ const AdminContentManager = ({ user }) => {
           const upload = await api.uploadImage(imageFiles.film, 'film');
           payload.poster_url = upload.url;
         }
-        payload.slug = payload.slug?.trim().slice(0, 255) || '';
+        payload.slug = payload.slug?.trim().slice(0, editing ? 255 : 30) || '';
         payload.poster_url = payload.poster_url?.trim() || '';
         payload.youtube_embed_url = payload.youtube_embed_url?.trim() || '';
         editing ? await api.updateFilm(editing.id, payload) : await api.createFilm(payload);
@@ -355,6 +355,15 @@ const AdminContentManager = ({ user }) => {
         </button>
       </div>
 
+      {user?.role === 'editor' && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-5">
+          <h3 className="mb-2 font-bold text-gray-900">Point non négociable</h3>
+          <p className="text-sm text-gray-700">
+            En cas de doute sur l'origine d'une vidéo, ne pas publier l'embed. Le site doit rester une plateforme éditoriale avec contenus originaux, pas une plateforme de streaming.
+          </p>
+        </div>
+      )}
+
       {message && (
         <div className={`border rounded-lg p-4 ${message.includes('succès') ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
           {message}
@@ -396,6 +405,7 @@ const AdminContentManager = ({ user }) => {
                 value={currentForm.slug}
                 onChange={(value) => setField('slug', value)}
                 required
+                maxLength={editing ? 255 : 30}
               />
               <TextArea label="Description originale" value={currentForm.description} onChange={(value) => setField('description', value)} minLength={300} required />
               <ImageUpload
@@ -666,7 +676,7 @@ const previewSlug = (value = '') => value
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
 
-const SlugInput = ({ label, value, onChange, required }) => {
+const SlugInput = ({ label, value, onChange, required, maxLength = 255 }) => {
   const slug = previewSlug(value);
 
   return (
@@ -677,12 +687,12 @@ const SlugInput = ({ label, value, onChange, required }) => {
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
-        maxLength={255}
+        maxLength={maxLength}
         placeholder="exemple: mon-film-special"
         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
       />
       <span className="mt-1 block text-xs text-gray-500">
-        URL finale normalisée: /films/{previewSlug(slug) || 'votre-mot'} · {slug.length}/255
+        URL finale normalisée: /films/{previewSlug(slug) || 'votre-mot'} · {slug.length}/{maxLength}
       </span>
     </label>
   );
