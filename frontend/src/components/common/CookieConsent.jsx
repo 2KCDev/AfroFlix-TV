@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useLocale } from '../../hooks/useLocale';
 
 const STORAGE_KEY = 'afroflix.tv_cookie_consent';
 const CONSENT_VERSION = 2;
@@ -11,7 +12,8 @@ const DEFAULT_PREFERENCES = {
   ads: false,
 };
 
-const categories = [
+const categories = {
+  fr: [
   {
     key: 'essential',
     title: 'Cookies essentiels',
@@ -28,7 +30,13 @@ const categories = [
     title: 'Publicité personnalisée',
     description: 'Prépare l’affichage de publicités et la mesure publicitaire, uniquement après votre accord.',
   },
-];
+  ],
+  en: [
+    { key: 'essential', title: 'Essential cookies', description: 'Sign-in, security, consent preferences and the proper functioning of the platform.', required: true },
+    { key: 'analytics', title: 'Audience measurement', description: 'Anonymous statistics to understand the pages visited and improve performance.' },
+    { key: 'ads', title: 'Personalised advertising', description: 'Prepares advertising display and ad measurement, only after your consent.' },
+  ],
+};
 
 const readStoredConsent = () => {
   try {
@@ -55,9 +63,24 @@ const publishConsent = (payload) => {
 };
 
 const CookieConsent = () => {
+  const { language } = useLocale();
   const [visible, setVisible] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
+  const isEnglish = language === 'en';
+  const copy = isEnglish ? {
+    privacy: 'Privacy', title: 'Cookie settings', policy: 'cookie policy',
+    intro: 'AFROFLIX.TV uses cookies essential to the operation of the website. Audience measurement and advertising cookies are activated only after your consent. You can accept, refuse or change your choices at any time from the',
+    active: 'Essential cookies active', activeDescription: 'Required for security, your session and your preferences.',
+    editable: 'Choices can be changed', editableDescription: 'A management button remains available on the cookies page.',
+    reject: 'Reject all', customise: 'Customise', save: 'Save my choices', accept: 'Accept all',
+  } : {
+    privacy: 'Confidentialité', title: 'Gestion des cookies', policy: 'politique des cookies',
+    intro: 'AFROFLIX.TV utilise les cookies essentiels au fonctionnement du site. Les cookies de mesure d’audience et de publicité ne sont activés qu’après votre accord. Vous pouvez accepter, refuser ou ajuster vos choix à tout moment depuis la',
+    active: 'Essentiels actifs', activeDescription: 'Nécessaires pour la sécurité, la session et vos préférences.',
+    editable: 'Choix modifiable', editableDescription: 'Un bouton de gestion reste disponible sur la page cookies.',
+    reject: 'Tout refuser', customise: 'Personnaliser', save: 'Enregistrer mes choix', accept: 'Tout accepter',
+  };
 
   useEffect(() => {
     const stored = readStoredConsent();
@@ -114,28 +137,26 @@ const CookieConsent = () => {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-5 sm:pb-5" role="region" aria-label="Préférences cookies">
+    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-5 sm:pb-5" role="region" aria-label={copy.title}>
       <div className="mx-auto max-w-5xl overflow-hidden rounded-lg border border-gray-200 bg-white shadow-2xl">
         <div className="grid gap-0 lg:grid-cols-[1.3fr_0.9fr]">
           <div className="p-5 sm:p-6">
             <div className="mb-3 flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-normal text-red-700">Confidentialité</p>
-                <h2 className="mt-1 text-xl font-bold text-gray-950">Gestion des cookies</h2>
+                <p className="text-xs font-bold uppercase tracking-normal text-red-700">{copy.privacy}</p>
+                <h2 className="mt-1 text-xl font-bold text-gray-950">{copy.title}</h2>
               </div>
               <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">RGPD</span>
             </div>
             <p className="text-sm leading-6 text-gray-700">
-              AFROFLIX.TV utilise les cookies essentiels au fonctionnement du site. Les cookies de mesure
-              d’audience et de publicité ne sont activés qu’après votre accord. Vous pouvez accepter, refuser
-              ou ajuster vos choix à tout moment depuis la <Link to="/cookies" className="font-semibold text-red-700 hover:text-red-800">politique des cookies</Link>.
+              {copy.intro} <Link to="/cookies" className="font-semibold text-red-700 hover:text-red-800">{copy.policy}</Link>.
             </p>
           </div>
 
           {customizing && (
             <div className="border-t border-gray-200 bg-gray-50 p-5 lg:border-l lg:border-t-0">
               <div className="grid gap-3">
-                {categories.map((category) => (
+                {(categories[language] || categories.fr).map((category) => (
                   <label
                     key={category.key}
                     className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3"
@@ -164,12 +185,12 @@ const CookieConsent = () => {
             <div className="border-t border-gray-200 bg-gray-50 p-5 lg:border-l lg:border-t-0">
               <div className="grid gap-3 text-sm text-gray-700">
                 <div className="rounded-lg border border-gray-200 bg-white p-3">
-                  <span className="font-semibold text-gray-950">Essentiels actifs</span>
-                  <p className="mt-1 text-xs leading-5 text-gray-600">Nécessaires pour la sécurité, la session et vos préférences.</p>
+                  <span className="font-semibold text-gray-950">{copy.active}</span>
+                  <p className="mt-1 text-xs leading-5 text-gray-600">{copy.activeDescription}</p>
                 </div>
                 <div className="rounded-lg border border-gray-200 bg-white p-3">
-                  <span className="font-semibold text-gray-950">Choix modifiable</span>
-                  <p className="mt-1 text-xs leading-5 text-gray-600">Un bouton de gestion reste disponible sur la page cookies.</p>
+                  <span className="font-semibold text-gray-950">{copy.editable}</span>
+                  <p className="mt-1 text-xs leading-5 text-gray-600">{copy.editableDescription}</p>
                 </div>
               </div>
             </div>
@@ -182,21 +203,21 @@ const CookieConsent = () => {
             onClick={() => saveChoice('rejected', DEFAULT_PREFERENCES)}
             className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
           >
-            Tout refuser
+            {copy.reject}
           </button>
           <button
             type="button"
             onClick={() => customizing ? saveChoice('custom') : setCustomizing(true)}
             className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50"
           >
-            {customizing ? 'Enregistrer mes choix' : 'Personnaliser'}
+            {customizing ? copy.save : copy.customise}
           </button>
           <button
             type="button"
             onClick={() => saveChoice('accepted')}
             className="rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
           >
-            Tout accepter
+            {copy.accept}
           </button>
         </div>
       </div>

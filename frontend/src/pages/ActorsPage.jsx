@@ -8,8 +8,13 @@ import SearchSuggest from '../components/common/SearchSuggest';
 import ErrorState from '../components/ErrorState';
 import { useListScrollRestoration } from '../utils/navigation';
 import { useActors } from '../hooks/useFilms';
+import { useLocale } from '../hooks/useLocale';
 
 const ActorsPage = () => {
+  const { language } = useLocale();
+  const c = language === 'en'
+    ? { actors: 'Actors', title: 'AfroFlix.TV actors', subtitle: 'Discover the talents of African cinema', search: 'Search for an actor…', error: 'Actors cannot be loaded at the moment. Please try again shortly.', none: 'No actors found' }
+    : { actors: 'Acteurs', title: 'Acteurs AfroFlix.TV', subtitle: 'Découvrez les talents du cinéma africain', search: 'Chercher un acteur…', error: 'Impossible de charger les acteurs pour le moment. Réessayez dans quelques instants.', none: 'Aucun acteur trouvé' };
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const page = parseInt(searchParams.get('page') || '1');
@@ -32,12 +37,12 @@ const ActorsPage = () => {
 
   return (
     <div className="space-y-8">
-      <Breadcrumbs items={[{ label: 'Acteurs' }]} />
+      <Breadcrumbs items={[{ label: c.actors }]} />
 
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Acteurs AfroFlix.TV</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">{c.title}</h1>
         <p className="text-gray-600">
-          Découvrez les talents du cinéma africain
+          {c.subtitle}
         </p>
       </div>
 
@@ -47,7 +52,7 @@ const ActorsPage = () => {
           value={searchTerm}
           onChange={setSearchTerm}
           onSubmit={handleSearch}
-          placeholder="Chercher un acteur..."
+          placeholder={c.search}
           autoSubmit
         />
       </div>
@@ -56,7 +61,7 @@ const ActorsPage = () => {
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
-        <ErrorState message="Impossible de charger les acteurs pour le moment. Réessayez dans quelques instants." />
+        <ErrorState message={c.error} />
       ) : actors.length > 0 ? (
         <>
           <ActorGrid actors={actors} />
@@ -72,7 +77,7 @@ const ActorsPage = () => {
         </>
       ) : (
         <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <p className="text-gray-600 text-lg font-semibold">Aucun acteur trouvé</p>
+          <p className="text-gray-600 text-lg font-semibold">{c.none}</p>
         </div>
       )}
     </div>

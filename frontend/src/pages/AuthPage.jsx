@@ -3,11 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
 import { FiAlertCircle, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useLocale } from '../hooks/useLocale';
 
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,128}$/;
 const PASSWORD_MESSAGE = 'Le mot de passe doit contenir au moins 8 caractères, une lettre, un chiffre et un caractère spécial.';
 
 const AuthPage = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? {
+    passwordRule: 'Password must contain at least 8 characters, a letter, a number and a special character.', requiredPassword: 'Password is required', mismatch: 'Passwords do not match', requiredEmail: 'Email is required', invalidEmail: 'Invalid email', requiredUsername: 'Username is required', shortUsername: 'Username must contain at least 3 characters', resetSent: 'If this account is eligible, an email has been sent.', updated: 'Password updated.', loginError: 'Sign-in error', registerError: 'Registration error', forgotTitle: 'Reset your password', resetTitle: 'Create a new password', loginTitle: 'Sign in to your account', registerTitle: 'Create your account', sendLink: 'Send link', update: 'Update password', signIn: 'Sign in', signUp: 'Sign up', email: 'Email address', username: 'Username', newPassword: 'New password', password: 'Password', minPassword: 'Minimum 8 characters with a letter, a number and a special character.', confirm: 'Confirm password', processing: 'Processing…', forgot: 'Forgot your password?', or: 'Or', noAccount: "Don't have an account? ", haveAccount: 'Already have an account? ', back: 'Back to sign in', continue: 'By continuing, you agree to our', terms: 'Terms', policy: 'Privacy policy'
+  } : {
+    passwordRule: 'Le mot de passe doit contenir au moins 8 caractères, une lettre, un chiffre et un caractère spécial.', requiredPassword: 'Mot de passe requis', mismatch: 'Les mots de passe ne correspondent pas', requiredEmail: 'Email requis', invalidEmail: 'Email invalide', requiredUsername: "Nom d'utilisateur requis", shortUsername: "Nom d'utilisateur doit contenir au moins 3 caractères", resetSent: 'Si ce compte est éligible, un email vient d’être envoyé.', updated: 'Mot de passe mis à jour.', loginError: 'Erreur de connexion', registerError: "Erreur d'inscription", forgotTitle: 'Réinitialiser votre mot de passe', resetTitle: 'Créer un nouveau mot de passe', loginTitle: 'Connectez-vous à votre compte', registerTitle: 'Créez votre compte', sendLink: 'Envoyer le lien', update: 'Mettre à jour le mot de passe', signIn: 'Se connecter', signUp: "S'inscrire", email: 'Adresse e-mail', username: "Nom d'utilisateur", newPassword: 'Nouveau mot de passe', password: 'Mot de passe', minPassword: 'Minimum 8 caractères avec une lettre, un chiffre et un caractère spécial.', confirm: 'Confirmer le mot de passe', processing: 'Traitement…', forgot: 'Mot de passe oublié ?', or: 'Ou', noAccount: 'Pas encore de compte ? ', haveAccount: 'Vous avez déjà un compte ? ', back: 'Retour à la connexion', continue: 'En continuant, vous acceptez nos', terms: 'Conditions', policy: 'Politique'
+  };
   const [isLogin, setIsLogin] = useState(true);
   const [authMode, setAuthMode] = useState('login');
   const [loading, setLoading] = useState(false);
@@ -60,34 +67,34 @@ const AuthPage = () => {
 
   const validateForm = () => {
     if (authMode === 'reset') {
-      if (!formData.password) return 'Mot de passe requis';
+      if (!formData.password) return c.requiredPassword;
       if (!PASSWORD_PATTERN.test(formData.password)) {
-        return PASSWORD_MESSAGE;
+        return c.passwordRule;
       }
       if (formData.password !== formData.confirmPassword) {
-        return 'Les mots de passe ne correspondent pas';
+        return c.mismatch;
       }
       return '';
     }
 
-    if (!formData.email.trim()) return 'Email requis';
+    if (!formData.email.trim()) return c.requiredEmail;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      return 'Email invalide';
+      return c.invalidEmail;
     }
     if (authMode === 'forgot') return '';
 
-    if (!formData.password) return 'Mot de passe requis';
+    if (!formData.password) return c.requiredPassword;
     if (!PASSWORD_PATTERN.test(formData.password)) {
-      return PASSWORD_MESSAGE;
+      return c.passwordRule;
     }
 
     if (!isLogin && authMode === 'login') {
-      if (!formData.username.trim()) return 'Nom d\'utilisateur requis';
+      if (!formData.username.trim()) return c.requiredUsername;
       if (formData.username.length < 3) {
-        return 'Nom d\'utilisateur doit contenir au moins 3 caractères';
+        return c.shortUsername;
       }
       if (formData.password !== formData.confirmPassword) {
-        return 'Les mots de passe ne correspondent pas';
+        return c.mismatch;
       }
     }
 
@@ -109,11 +116,11 @@ const AuthPage = () => {
     try {
       if (authMode === 'forgot') {
         const response = await api.forgotPassword(formData.email);
-        setSuccess(response.message || 'Si ce compte est éligible, un email vient d’être envoyé.');
+        setSuccess(response.message || c.resetSent);
       } else if (authMode === 'reset') {
         const token = new URLSearchParams(location.search).get('reset_token');
         const response = await api.resetPassword(token, formData.password);
-        setSuccess(response.message || 'Mot de passe mis à jour.');
+        setSuccess(response.message || c.updated);
         setAuthMode('login');
         navigate('/auth', { replace: true });
         setFormData({
@@ -129,7 +136,7 @@ const AuthPage = () => {
       }
       // Navigation handled by useEffect
     } catch (err) {
-      setError(err.message || (isLogin ? 'Erreur de connexion' : 'Erreur d\'inscription'));
+      setError(err.message || (isLogin ? c.loginError : c.registerError));
     } finally {
       setLoading(false);
     }
@@ -153,20 +160,20 @@ const AuthPage = () => {
   };
 
   const title = authMode === 'forgot'
-    ? 'Réinitialiser votre mot de passe'
+    ? c.forgotTitle
     : authMode === 'reset'
-      ? 'Créer un nouveau mot de passe'
+      ? c.resetTitle
       : isLogin
-        ? 'Connectez-vous à votre compte'
-        : 'Créez votre compte';
+        ? c.loginTitle
+        : c.registerTitle;
 
   const buttonLabel = authMode === 'forgot'
-    ? 'Envoyer le lien'
+    ? c.sendLink
     : authMode === 'reset'
-      ? 'Mettre à jour le mot de passe'
+      ? c.update
       : isLogin
-        ? 'Se connecter'
-        : 'S\'inscrire';
+        ? c.signIn
+        : c.signUp;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4">
@@ -199,7 +206,7 @@ const AuthPage = () => {
             {authMode !== 'reset' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Adresse e-mail
+                {c.email}
               </label>
               <input
                 type="email"
@@ -217,7 +224,7 @@ const AuthPage = () => {
             {!isLogin && authMode === 'login' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom d'utilisateur
+                  {c.username}
                 </label>
                 <input
                   type="text"
@@ -235,7 +242,7 @@ const AuthPage = () => {
             {authMode !== 'forgot' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {authMode === 'reset' ? 'Nouveau mot de passe' : 'Mot de passe'}
+                {authMode === 'reset' ? c.newPassword : c.password}
               </label>
               <div className="relative">
                 <input
@@ -261,7 +268,7 @@ const AuthPage = () => {
 
             {(!isLogin || authMode === 'reset') && authMode !== 'forgot' && (
               <p className="text-xs text-gray-500">
-                Minimum 8 caractères avec une lettre, un chiffre et un caractère spécial.
+                {c.minPassword}
               </p>
             )}
 
@@ -269,7 +276,7 @@ const AuthPage = () => {
             {(!isLogin || authMode === 'reset') && authMode !== 'forgot' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirmer le mot de passe
+                  {c.confirm}
                 </label>
                 <input
                   type="password"
@@ -289,7 +296,7 @@ const AuthPage = () => {
               disabled={loading}
               className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 rounded-lg transition duration-200 transform hover:scale-105 active:scale-95"
             >
-              {loading ? 'Traitement...' : buttonLabel}
+              {loading ? c.processing : buttonLabel}
             </button>
           </form>
 
@@ -299,7 +306,7 @@ const AuthPage = () => {
               onClick={() => switchMode('forgot')}
               className="mt-4 w-full text-center text-sm font-semibold text-red-600 hover:text-red-700"
             >
-              Mot de passe oublié ?
+              {c.forgot}
             </button>
           )}
 
@@ -307,7 +314,7 @@ const AuthPage = () => {
           {authMode !== 'reset' && (
           <div className="my-6 flex items-center">
             <div className="flex-grow border-t border-gray-300"></div>
-            <span className="px-3 text-gray-400 text-sm">Ou</span>
+            <span className="px-3 text-gray-400 text-sm">{c.or}</span>
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
           )}
@@ -315,7 +322,7 @@ const AuthPage = () => {
           {/* Toggle Form */}
           {authMode === 'login' ? (
             <p className="text-center text-gray-600 text-sm">
-            {isLogin ? 'Pas encore de compte? ' : 'Vous avez déjà un compte? '}
+            {isLogin ? c.noAccount : c.haveAccount}
             <button
               type="button"
               onClick={() => {
@@ -323,7 +330,7 @@ const AuthPage = () => {
               }}
               className="text-red-600 hover:text-red-700 font-semibold"
             >
-              {isLogin ? 'S\'inscrire' : 'Se connecter'}
+              {isLogin ? c.signUp : c.signIn}
             </button>
             </p>
           ) : (
@@ -333,7 +340,7 @@ const AuthPage = () => {
                 onClick={() => switchMode('login', true)}
                 className="font-semibold text-red-600 hover:text-red-700"
               >
-                Retour à la connexion
+                {c.back}
               </button>
             </p>
           )}
@@ -341,11 +348,11 @@ const AuthPage = () => {
 
         {/* Footer Links */}
         <div className="mt-6 text-center text-xs text-gray-500 space-y-1">
-          <p>En continuant, vous acceptez nos</p>
+          <p>{c.continue}</p>
           <div className="flex justify-center gap-2">
-            <a href="/privacy" className="hover:text-red-600">Conditions</a>
+            <a href="/terms" className="hover:text-red-600">{c.terms}</a>
             <span>•</span>
-            <a href="/legal" className="hover:text-red-600">Politique</a>
+            <a href="/privacy" className="hover:text-red-600">{c.policy}</a>
           </div>
         </div>
       </div>

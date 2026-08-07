@@ -10,8 +10,12 @@ import ErrorState from '../components/ErrorState';
 import { useArticles } from '../hooks/useFilms';
 import { api } from '../services/api';
 import { ensureDirectDetailBackStack, useListScrollRestoration } from '../utils/navigation';
+import { useLocale } from '../hooks/useLocale';
+import { getLocalizedArticleExcerpt, localizeArticleCategory } from '../utils/content';
 
 const BlogPage = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? { news: 'News', missing: 'Article not found', missingText: 'This article does not exist or is no longer published.', backNews: 'Back to news', backBlog: '← Back to blog', read: 'min read', share: 'Share this article', related: 'Related articles', noRelated: 'No related articles published yet.', title: 'AfroFlix.TV blog', subtitle: 'News, analysis and guides to African cinema', all: 'All', error: 'Articles cannot be loaded at the moment. Please try again shortly.', none: 'No articles found', author: 'AFROFLIX.TV editorial team' } : { news: 'Actualités', missing: 'Article non trouvé', missingText: "Cet article n'existe pas ou n'est plus publié.", backNews: 'Retour aux actualités', backBlog: '← Retour au blog', read: 'min de lecture', share: 'Partager cet article', related: 'Articles connexes', noRelated: 'Aucun article connexe publié pour le moment.', title: 'Blog AfroFlix.TV', subtitle: 'Actualités, analyses et guides du cinéma africain', all: 'Tous', error: 'Impossible de charger les articles pour le moment. Réessayez dans quelques instants.', none: 'Aucun article trouvé', author: 'Rédaction AFROFLIX.TV' };
   const { slug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = parseInt(searchParams.get('page') || '1');
@@ -69,12 +73,12 @@ const BlogPage = () => {
   if (slug && !article) {
     return (
       <div className="max-w-3xl mx-auto rounded-lg border border-gray-200 bg-white p-10 text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">Article non trouvé</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-3">{c.missing}</h1>
         <p className="text-gray-600 mb-6">
-          Cet article n'existe pas ou n'est plus publié.
+          {c.missingText}
         </p>
         <Link to="/actualites" className="inline-block rounded-lg bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-700">
-          Retour aux actualités
+          {c.backNews}
         </Link>
       </div>
     );
@@ -82,6 +86,9 @@ const BlogPage = () => {
 
   // Single article view
   if (slug && article) {
+    const articleTitle = language === 'en' && article.title_en?.trim() ? article.title_en : article.title;
+    const articleContent = language === 'en' && article.content_en?.trim() ? article.content_en : article.content;
+    const articleExcerpt = getLocalizedArticleExcerpt(article, language);
     const articleImage = article.featured_image || article.imageUrl;
     const articleDate = article.published_at || article.created_at || article.createdAt;
     const relatedArticles = (listData?.articles || [])
@@ -91,41 +98,41 @@ const BlogPage = () => {
     return (
       <div className="max-w-4xl mx-auto space-y-8">
         <SEO
-          title={article.title}
-          description={(article.excerpt || article.content || '').slice(0, 155)}
+          title={articleTitle}
+          description={(articleExcerpt || articleContent || '').slice(0, 155)}
           image={articleImage}
           type="article"
           jsonLd={{
             '@context': 'https://schema.org',
             '@type': 'BlogPosting',
-            headline: article.title,
+            headline: articleTitle,
             image: articleImage,
             datePublished: articleDate,
-            author: { '@type': 'Person', name: article.author || 'Rédaction AFROFLIX.TV' },
+            author: { '@type': 'Person', name: article.author || c.author },
           }}
         />
-        <Breadcrumbs items={[{ label: 'Actualités', to: '/actualites' }, { label: article.title }]} />
+        <Breadcrumbs items={[{ label: c.news, to: '/actualites' }, { label: articleTitle }]} />
 
         <Link to="/actualites" className="text-red-600 hover:text-red-700 font-semibold">
-          ← Retour au blog
+          {c.backBlog}
         </Link>
 
         <article className="space-y-6">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">{article.title}</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">{articleTitle}</h1>
             <div className="flex gap-4 text-sm text-gray-600">
               <span className="bg-red-100 text-red-800 px-3 py-1 rounded font-semibold">
-                {article.category}
+                {localizeArticleCategory(article.category, language)}
               </span>
-              <span>{new Date(articleDate).toLocaleDateString('fr-FR')}</span>
-              <span>{article.readTime || '5'} min de lecture</span>
+              <span>{new Date(articleDate).toLocaleDateString(language === 'en' ? 'en-GB' : 'fr-FR')}</span>
+              <span>{article.readTime || '5'} {c.read}</span>
             </div>
           </div>
 
           {articleImage && (
             <img
               src={articleImage}
-              alt={article.title}
+              alt={articleTitle}
               loading="eager"
               decoding="async"
               className="w-full rounded-lg shadow-lg max-h-96 object-cover"
@@ -133,18 +140,18 @@ const BlogPage = () => {
           )}
 
           <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed space-y-4">
-            {article.content?.split('\n').map((paragraph, idx) => (
+            {articleContent?.split('\n').map((paragraph, idx) => (
               <p key={idx} className="text-justify">{paragraph}</p>
             ))}
           </div>
 
           <div className="border-t border-gray-200 pt-6">
-            <h3 className="font-bold text-gray-900 mb-4">Partager cet article</h3>
-            <ShareButtons title={article.title} />
+            <h3 className="font-bold text-gray-900 mb-4">{c.share}</h3>
+            <ShareButtons title={articleTitle} />
           </div>
 
           <div className="border-t-2 border-gray-200 pt-6">
-            <h3 className="font-bold text-gray-900 mb-4">Articles connexes</h3>
+            <h3 className="font-bold text-gray-900 mb-4">{c.related}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {relatedArticles.length > 0 ? (
                 relatedArticles.map((item) => (
@@ -154,16 +161,16 @@ const BlogPage = () => {
                     className="rounded-lg border border-gray-200 bg-white p-4 hover:shadow-md transition"
                   >
                     <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">
-                      {item.category}
+                      {localizeArticleCategory(item.category, language)}
                     </span>
-                    <h4 className="mt-3 font-bold text-gray-900 hover:text-red-600">{item.title}</h4>
+                    <h4 className="mt-3 font-bold text-gray-900 hover:text-red-600">{language === 'en' && item.title_en?.trim() ? item.title_en : item.title}</h4>
                     <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                      {item.excerpt || item.content?.substring(0, 120)}...
+                      {getLocalizedArticleExcerpt(item, language, 120)}...
                     </p>
                   </Link>
                 ))
               ) : (
-                <p className="text-gray-600">Aucun article connexe publié pour le moment.</p>
+                <p className="text-gray-600">{c.noRelated}</p>
               )}
             </div>
           </div>
@@ -178,11 +185,11 @@ const BlogPage = () => {
 
   return (
     <div className="space-y-8">
-      <Breadcrumbs items={[{ label: 'Actualités' }]} />
+      <Breadcrumbs items={[{ label: c.news }]} />
 
       <div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Blog AfroFlix.TV</h1>
-        <p className="text-gray-600">Actualités, analyses et guides du cinéma africain</p>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">{c.title}</h1>
+        <p className="text-gray-600">{c.subtitle}</p>
       </div>
 
       {/* Category Filter */}
@@ -195,7 +202,7 @@ const BlogPage = () => {
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          Tous
+          {c.all}
         </Link>
         {categories.map((cat) => (
           <Link
@@ -207,7 +214,7 @@ const BlogPage = () => {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {cat}
+            {localizeArticleCategory(cat, language)}
           </Link>
         ))}
       </div>
@@ -216,7 +223,7 @@ const BlogPage = () => {
       {loading ? (
         <LoadingSpinner />
       ) : listError ? (
-        <ErrorState message="Impossible de charger les articles pour le moment. Réessayez dans quelques instants." />
+        <ErrorState message={c.error} />
       ) : articles.length > 0 ? (
         <>
           <div className="space-y-6">
@@ -236,7 +243,7 @@ const BlogPage = () => {
         </>
       ) : (
         <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <p className="text-gray-600 text-lg font-semibold">Aucun article trouvé</p>
+          <p className="text-gray-600 text-lg font-semibold">{c.none}</p>
         </div>
       )}
     </div>

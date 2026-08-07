@@ -5,8 +5,13 @@ import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { api } from '../services/api';
 import { formatDate, truncateText } from '../utils/content';
+import { useLocale } from '../hooks/useLocale';
 
 const ReviewsPage = () => {
+  const { language } = useLocale();
+  const c = language === 'en'
+    ? { reviews: 'Reviews', title: 'AfroFlix.TV reviews', subtitle: 'Original analyses, editorial rankings and advice to help you choose your next films.', empty: 'No reviews published yet.', emptyText: 'Analyses will appear here once they are published on the blog.' }
+    : { reviews: 'Critiques', title: 'Critiques AfroFlix.TV', subtitle: 'Analyses originales, classements éditoriaux et conseils pour choisir vos prochains films.', empty: 'Aucune critique publiée pour le moment.', emptyText: 'Les analyses apparaîtront ici dès publication dans le blog.' };
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,14 +33,14 @@ const ReviewsPage = () => {
 
   return (
     <div className="space-y-8">
-      <Breadcrumbs items={[{ label: 'Critiques' }]} />
+      <Breadcrumbs items={[{ label: c.reviews }]} />
 
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
           <FiEdit3 className="text-red-600" />
-          Critiques AfroFlix.TV
+          {c.title}
         </h1>
-        <p className="text-gray-600">Analyses originales, classements éditoriaux et conseils pour choisir vos prochains films.</p>
+        <p className="text-gray-600">{c.subtitle}</p>
       </div>
 
       {loading ? (
@@ -65,8 +70,8 @@ const ReviewsPage = () => {
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg p-10 text-center">
-          <p className="font-semibold text-gray-900">Aucune critique publiée pour le moment.</p>
-          <p className="text-gray-600 mt-2">Les analyses apparaîtront ici dès publication dans le blog.</p>
+          <p className="font-semibold text-gray-900">{c.empty}</p>
+          <p className="text-gray-600 mt-2">{c.emptyText}</p>
         </div>
       )}
     </div>

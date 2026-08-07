@@ -5,6 +5,7 @@ const { authMiddleware, editorOrAdmin } = require('../middleware/auth');
 
 // Public routes
 router.get('/', actorsController.getAllActors);
+router.get('/manage/options', authMiddleware, editorOrAdmin, actorsController.getActorSelectionOptions);
 router.get('/manage/list', authMiddleware, editorOrAdmin, actorsController.getManageableActors);
 router.get('/:slug', actorsController.getActorBySlug);
 

@@ -1,7 +1,16 @@
 import { useEffect } from 'react';
+import { useLocale } from '../../hooks/useLocale';
 
-const DEFAULT_TITLE = 'AFROFLIX.TV - Films, acteurs et actualités du cinéma africain';
-const DEFAULT_DESCRIPTION = 'La plateforme francophone pour découvrir AfroFlix.TV: films, acteurs, critiques, classements et actualités.';
+const defaults = {
+  fr: {
+    title: 'AFROFLIX.TV - Films, acteurs et actualités du cinéma africain',
+    description: 'La plateforme francophone pour découvrir AfroFlix.TV : films, acteurs, critiques, classements et actualités.',
+  },
+  en: {
+    title: 'AFROFLIX.TV - African cinema films, actors and news',
+    description: 'Your platform for discovering African cinema: films, actors, reviews, rankings and news.',
+  },
+};
 
 const setMeta = (name, content, property = false) => {
   const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
@@ -15,9 +24,12 @@ const setMeta = (name, content, property = false) => {
 };
 
 const SEO = ({ title, description, image, type = 'website', jsonLd }) => {
+  const { language } = useLocale();
+  const fallback = defaults[language] || defaults.fr;
+
   useEffect(() => {
-    const fullTitle = title ? `${title} | AFROFLIX.TV` : DEFAULT_TITLE;
-    const metaDescription = description || DEFAULT_DESCRIPTION;
+    const fullTitle = title ? `${title} | AFROFLIX.TV` : fallback.title;
+    const metaDescription = description || fallback.description;
 
     document.title = fullTitle;
     setMeta('description', metaDescription);
@@ -40,7 +52,7 @@ const SEO = ({ title, description, image, type = 'website', jsonLd }) => {
       script.textContent = JSON.stringify(jsonLd);
       document.head.appendChild(script);
     }
-  }, [title, description, image, type, jsonLd]);
+  }, [title, description, image, type, jsonLd, fallback]);
 
   return null;
 };

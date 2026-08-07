@@ -78,6 +78,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
+        # Local Docker uses the local reverse proxy; production can explicitly set NGINX_CONF=nginx.conf.
+        NGINX_CONF: ${NGINX_CONF:-nginx.local.conf}
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_GOOGLE_SITE_VERIFICATION: ${VITE_GOOGLE_SITE_VERIFICATION:-}
         VITE_GOOGLE_ANALYTICS_ID: ${VITE_GOOGLE_ANALYTICS_ID:-}

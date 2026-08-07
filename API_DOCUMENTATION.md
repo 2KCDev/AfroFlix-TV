@@ -323,6 +323,8 @@ Authorization: Bearer {token}
 }
 ```
 
+`birth_date` est facultatif et peut être omis lorsqu'elle n'est pas communiquée publiquement.
+
 ---
 
 ## 📰 Articles

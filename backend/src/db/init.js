@@ -12,6 +12,16 @@ const ensureDatabaseReady = async () => {
       ADD COLUMN IF NOT EXISTS youtube_video_id VARCHAR(255)
   `);
 
+  // Optional English editorial versions. Existing French content remains the
+  // canonical fallback until an editor supplies a reviewed translation.
+  await pool.query(`
+    ALTER TABLE actors
+      ADD COLUMN IF NOT EXISTS biography_en TEXT;
+    ALTER TABLE articles
+      ADD COLUMN IF NOT EXISTS title_en VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS content_en TEXT;
+  `);
+
   // Import the historical ratings once. New ratings maintain these counters
   // atomically, avoiding a full AVG() scan on every vote.
   await pool.query(`

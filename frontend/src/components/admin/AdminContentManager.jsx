@@ -3,6 +3,7 @@ import { FiArchive, FiEdit3, FiImage, FiPlus, FiRefreshCw, FiSave, FiSearch, FiU
 import LoadingSpinner from '../common/LoadingSpinner';
 import { api } from '../../services/api';
 import { formatDate, truncateText } from '../../utils/content';
+import { useLocale } from '../../hooks/useLocale';
 
 const initialForms = {
   film: {
@@ -20,12 +21,15 @@ const initialForms = {
   actor: {
     name: '',
     biography: '',
+    biography_en: '',
     birth_date: '',
     photo_url: '',
   },
   article: {
     title: '',
+    title_en: '',
     content: '',
+    content_en: '',
     category: 'Actualités',
     featured_image: '',
     author: 'Rédaction AFROFLIX.TV',
@@ -52,16 +56,17 @@ const ContentTableFilters = ({
   setStatus,
   onSubmit,
   placeholder,
+  c,
 }) => (
   <form onSubmit={onSubmit} className="w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
     <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
       <FiSearch className="text-red-600" />
-      Recherche de contenus
+      {c.searchContent}
     </h4>
     <div className="space-y-3">
       <div>
         <label className="block min-w-0">
-          <span className="sr-only">Mots clés</span>
+          <span className="sr-only">{c.keywords}</span>
           <input
             type="search"
             value={search}
@@ -72,16 +77,16 @@ const ContentTableFilters = ({
         </label>
       </div>
       <label className="block">
-        <span className="block text-sm font-semibold text-gray-700 mb-1">Statut</span>
+        <span className="block text-sm font-semibold text-gray-700 mb-1">{c.status}</span>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value)}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-red-500"
         >
-          <option value="">Tous les statuts</option>
-          <option value="published">Publiés</option>
-          <option value="draft">Brouillons</option>
-          <option value="archived">Archives</option>
+          <option value="">{c.allStatuses}</option>
+          <option value="published">{c.published}</option>
+          <option value="draft">{c.draft}</option>
+          <option value="archived">{c.archived}</option>
         </select>
       </label>
     </div>
@@ -89,9 +94,16 @@ const ContentTableFilters = ({
 );
 
 const AdminContentManager = ({ user }) => {
+  const { language } = useLocale();
+  const c = language === 'en' ? {
+    searchContent: 'Content search', keywords: 'Keywords', status: 'Status', allStatuses: 'All statuses', published: 'Published', draft: 'Drafts', archived: 'Archived', contentSaved: 'Content saved successfully.', archiveSuccess: 'Content archived successfully.', restoreSuccess: 'Content restored successfully.', genreAdmin: 'Only an administrator can manage genres.', archiveFilmDenied: 'Only an administrator or the owning editor can archive this film.', archiveArticleDenied: 'Only an administrator or the owning editor can archive this article.', archiveActorDenied: 'Only an administrator or the owning editor can archive this actor.', deleteDenied: 'Only an administrator can delete or archive this content.', title: 'Content management', intro: 'Films, actors, articles and genres with minimum editorial validation.', refresh: 'Refresh', warningTitle: 'Non-negotiable point', warning: 'If there is any doubt about a video’s source, do not publish the embed. The site must remain an editorial platform with original content, not a streaming platform.', edit: 'Edit', add: 'Add', titleLabel: 'Title', englishTitle: 'English title', slug: 'URL identifier', originalDescription: 'Original description', posterImage: 'Poster image displayed on the site', director: 'Director', directorPlaceholder: 'Enter the director’s name', country: 'Country', year: 'Year', videoUrl: 'Official video link (YouTube URL or embed)', genres: 'Genres', actors: 'Actors', selectGenres: 'Select genres', searchGenre: 'Search for a genre...', noGenre: 'No genre found.', selectActors: 'Select actors', searchActor: 'Search for an actor...', noActor: 'No actor found.', name: 'Name', originalBio: 'Original biography', englishBio: 'English biography', translationHint: 'Optional: if left empty, visitors will see the French version.', birthDate: 'Date of birth (optional)', birthHelp: 'Leave this blank if it has not been shared publicly.', actorPhoto: 'Actor photo', category: 'Category', originalContent: 'Original content', englishContent: 'English content', mainImage: 'Main image', author: 'Author', seoIntro: 'Genre SEO introduction', saving: 'Saving...', save: 'Save', cancel: 'Cancel', filmSearch: 'Keywords: title, actor, director, genre...', actorSearch: 'Keywords: name, biography...', articleSearch: 'Keywords: title, content, category, author...', content: 'Content', details: 'Details', actions: 'Actions', restore: 'Restore', archive: 'Archive', noContent: 'No content available.', views: 'views', unknownYear: 'Year?', missingBio: 'Biography not provided', missingIntro: 'Introduction not provided', imagePreview: 'Image preview', uploadImage: 'Upload an image', pasteImageUrl: 'or paste an image URL', imageHelp: 'JPG, PNG, WebP or GIF, 5 MB maximum.', minimumCharacters: 'characters minimum', finalUrl: 'Normalised final URL', yourWord: 'your-word', slugPlaceholder: 'example: my-special-film', confirmArchive: 'Confirm archive', archiveWarning: 'This content will no longer be publicly visible. You can restore it later from this area.', confirmRestore: 'Confirm restore', restoreWarning: 'This content will become available again according to its publication rules. Check that it is ready to be restored.', archiveQuestion: 'Archive?', restoreQuestion: 'Restore?', tabLabels: { film: 'Films', actor: 'Actors', article: 'Articles', genre: 'Genres' }, categoryLabels: { 'Actualités': 'News', 'Classements': 'Rankings', Analyses: 'Analysis', Conseils: 'Tips', Dossiers: 'Features', Portraits: 'Profiles', Guides: 'Guides' }, locale: 'en-US', emptyDate: 'Not provided',
+  } : {
+    searchContent: 'Recherche de contenus', keywords: 'Mots clés', status: 'Statut', allStatuses: 'Tous les statuts', published: 'Publiés', draft: 'Brouillons', archived: 'Archives', contentSaved: 'Contenu enregistré avec succès.', archiveSuccess: 'Contenu archivé avec succès.', restoreSuccess: 'Contenu désarchivé avec succès.', genreAdmin: 'Seul un administrateur peut gérer les genres.', archiveFilmDenied: 'Seul un administrateur ou l’éditeur propriétaire peut archiver ce film.', archiveArticleDenied: 'Seul un administrateur ou l’éditeur propriétaire peut archiver cet article.', archiveActorDenied: 'Seul un administrateur ou l’éditeur propriétaire peut archiver cet acteur.', deleteDenied: 'Seul un administrateur peut supprimer ou archiver ce contenu.', title: 'Gestion des contenus', intro: 'Films, acteurs, articles et genres avec validation éditoriale minimale.', refresh: 'Actualiser', warningTitle: 'Point non négociable', warning: "En cas de doute sur l'origine d'une vidéo, ne pas publier l'embed. Le site doit rester une plateforme éditoriale avec contenus originaux, pas une plateforme de streaming.", edit: 'Modifier', add: 'Ajouter', titleLabel: 'Titre', englishTitle: 'Titre anglais', slug: 'Identifiant URL', originalDescription: 'Description originale', posterImage: "Image d'affiche visible sur le site", director: 'Réalisateur', directorPlaceholder: 'Saisir le nom du réalisateur', country: 'Pays', year: 'Année', videoUrl: 'Lien vidéo officiel (YouTube URL ou embed)', genres: 'Genres', actors: 'Acteurs', selectGenres: 'Sélectionner les genres', searchGenre: 'Rechercher un genre...', noGenre: 'Aucun genre trouvé.', selectActors: 'Sélectionner les acteurs', searchActor: 'Rechercher un acteur...', noActor: 'Aucun acteur trouvé.', name: 'Nom', originalBio: 'Biographie originale', englishBio: 'Biographie anglaise', translationHint: 'Facultatif : si ce champ est vide, les visiteurs verront la version française.', birthDate: 'Date de naissance (facultative)', birthHelp: 'Laissez ce champ vide si elle n’est pas communiquée publiquement.', actorPhoto: "Photo de l'acteur", category: 'Catégorie', originalContent: 'Contenu original', englishContent: 'Contenu anglais', mainImage: 'Image principale', author: 'Auteur', seoIntro: 'Introduction SEO du genre', saving: 'Enregistrement...', save: 'Enregistrer', cancel: 'Annuler', filmSearch: 'Mots clés: titre, acteur, réalisateur, genre...', actorSearch: 'Mots clés: nom, biographie...', articleSearch: 'Mots clés: titre, contenu, catégorie, auteur...', content: 'Contenu', details: 'Détails', actions: 'Actions', restore: 'Désarchiver', archive: 'Archiver', noContent: 'Aucun contenu disponible.', views: 'vues', unknownYear: 'Année ?', missingBio: 'Biographie non renseignée', missingIntro: 'Introduction non renseignée', imagePreview: 'Aperçu image', uploadImage: 'Uploader une image', pasteImageUrl: "ou coller une URL d'image", imageHelp: 'JPG, PNG, WebP ou GIF, 5 Mo maximum.', minimumCharacters: 'caractères minimum', finalUrl: 'URL finale normalisée', yourWord: 'votre-mot', slugPlaceholder: 'exemple: mon-film-special', confirmArchive: 'Confirmer l’archivage', archiveWarning: 'Ce contenu ne sera plus visible publiquement. Vous pourrez le désarchiver plus tard depuis cet espace.', confirmRestore: 'Confirmer le désarchivage', restoreWarning: 'Ce contenu redeviendra disponible selon ses règles de publication. Vérifiez qu’il est prêt à être restauré.', archiveQuestion: 'Archiver ?', restoreQuestion: 'Désarchiver ?', tabLabels: { film: 'Films', actor: 'Acteurs', article: 'Articles', genre: 'Genres' }, locale: 'fr-FR', emptyDate: 'Non renseigné',
+  };
   const [activeType, setActiveType] = useState('film');
   const [forms, setForms] = useState(initialForms);
   const [data, setData] = useState({ films: [], actors: [], articles: [], genres: [] });
+  const [filmOptions, setFilmOptions] = useState({ actors: [], genres: [] });
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -114,7 +126,7 @@ const AdminContentManager = ({ user }) => {
   const load = async () => {
     setLoading(true);
     try {
-      const [films, actors, articles, genres] = await Promise.all([
+      const [films, actors, articles, genres, actorOptions] = await Promise.all([
         api.adminFilms({
           page: 1,
           limit: 100,
@@ -133,14 +145,21 @@ const AdminContentManager = ({ user }) => {
           ...(articleSearch.trim().length >= 2 && { q: articleSearch.trim() }),
           ...(articleStatus && { status: articleStatus }),
         }),
-        api.adminGenres(),
+        user?.role === 'admin' ? api.adminGenres() : api.filmGenreOptions(),
+        api.filmActorOptions(),
       ]);
+
+      const genreList = Array.isArray(genres) ? genres : genres.genres || [];
 
       setData({
         films: films.data || films.films || [],
         actors: actors.actors || [],
         articles: articles.articles || [],
-        genres: Array.isArray(genres) ? genres : genres.genres || [],
+        genres: genreList,
+      });
+      setFilmOptions({
+        actors: actorOptions.actors || [],
+        genres: genreList,
       });
       setMessage('');
     } catch (err) {
@@ -205,12 +224,15 @@ const AdminContentManager = ({ user }) => {
       actor: {
         name: item.name || '',
         biography: item.biography || '',
+        biography_en: item.biography_en || '',
         birth_date: item.birth_date ? item.birth_date.slice(0, 10) : '',
         photo_url: item.photo_url || '',
       },
       article: {
         title: item.title || '',
+        title_en: item.title_en || '',
         content: item.content || '',
+        content_en: item.content_en || '',
         category: item.category || 'Actualités',
         featured_image: item.featured_image || '',
         author: item.author || 'Rédaction AFROFLIX.TV',
@@ -262,13 +284,13 @@ const AdminContentManager = ({ user }) => {
         editing ? await api.updateArticle(editing.id, payload) : await api.createArticle(payload);
       }
       if (activeType === 'genre') {
-        if (!canManageGenres) throw new Error('Seul un administrateur peut gérer les genres.');
+        if (!canManageGenres) throw new Error(c.genreAdmin);
         editing ? await api.updateGenre(editing.id, payload) : await api.createGenre(payload);
       }
 
       resetForm();
       await load();
-      setMessage('Contenu enregistré avec succès.');
+      setMessage(c.contentSaved);
     } catch (err) {
       setMessage(err.message);
     } finally {
@@ -278,19 +300,19 @@ const AdminContentManager = ({ user }) => {
 
   const canManageAction = (type, item) => {
     if (type === 'film' && !canArchiveFilm) {
-      setMessage('Seul un administrateur ou l’éditeur propriétaire peut archiver ce film.');
+      setMessage(c.archiveFilmDenied);
       return false;
     }
     if (type === 'article' && !canArchiveArticle) {
-      setMessage('Seul un administrateur ou l’éditeur propriétaire peut archiver cet article.');
+      setMessage(c.archiveArticleDenied);
       return false;
     }
     if (type === 'actor' && !['admin', 'editor'].includes(user?.role)) {
-      setMessage('Seul un administrateur ou l’éditeur propriétaire peut archiver cet acteur.');
+      setMessage(c.archiveActorDenied);
       return false;
     }
     if (!['film', 'article', 'actor'].includes(type) && !canDelete) {
-      setMessage('Seul un administrateur peut supprimer ou archiver ce contenu.');
+      setMessage(c.deleteDenied);
       return false;
     }
     if (type === 'actor') return canManageRow(type, item, user, true);
@@ -329,7 +351,7 @@ const AdminContentManager = ({ user }) => {
       }
       setPendingAction(null);
       await load();
-      setMessage(mode === 'archive' ? 'Contenu archivé avec succès.' : 'Contenu désarchivé avec succès.');
+      setMessage(mode === 'archive' ? c.archiveSuccess : c.restoreSuccess);
     } catch (err) {
       setMessage(err.message);
     }
@@ -346,26 +368,26 @@ const AdminContentManager = ({ user }) => {
     <section className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestion des contenus</h2>
-          <p className="text-gray-600">Films, acteurs, articles et genres avec validation éditoriale minimale.</p>
+          <h2 className="text-2xl font-bold text-gray-900">{c.title}</h2>
+          <p className="text-gray-600">{c.intro}</p>
         </div>
         <button onClick={load} className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
           <FiRefreshCw size={16} />
-          Actualiser
+          {c.refresh}
         </button>
       </div>
 
       {user?.role === 'editor' && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 p-5">
-          <h3 className="mb-2 font-bold text-gray-900">Point non négociable</h3>
+          <h3 className="mb-2 font-bold text-gray-900">{c.warningTitle}</h3>
           <p className="text-sm text-gray-700">
-            En cas de doute sur l'origine d'une vidéo, ne pas publier l'embed. Le site doit rester une plateforme éditoriale avec contenus originaux, pas une plateforme de streaming.
+            {c.warning}
           </p>
         </div>
       )}
 
       {message && (
-        <div className={`border rounded-lg p-4 ${message.includes('succès') ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+        <div className={`border rounded-lg p-4 ${[c.contentSaved, c.archiveSuccess, c.restoreSuccess].includes(message) ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
           {message}
         </div>
       )}
@@ -385,7 +407,7 @@ const AdminContentManager = ({ user }) => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             } disabled:opacity-40 disabled:cursor-not-allowed`}
           >
-            {tab.label}
+            {c.tabLabels[tab.id]}
           </button>
         ))}
       </div>
@@ -394,112 +416,131 @@ const AdminContentManager = ({ user }) => {
         <form ref={formRef} onSubmit={submit} className="w-full bg-white rounded-lg shadow-md p-6 space-y-4">
           <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <FiPlus className="text-red-600" />
-            {editing ? 'Modifier' : 'Ajouter'} {tabs.find((tab) => tab.id === activeType)?.label.toLowerCase()}
+            {editing ? c.edit : c.add} {c.tabLabels[activeType].toLowerCase()}
           </h3>
 
           {activeType === 'film' && (
             <>
-              <TextInput label="Titre" value={currentForm.title} onChange={(value) => setField('title', value)} required />
+              <TextInput label={c.titleLabel} value={currentForm.title} onChange={(value) => setField('title', value)} required />
               <SlugInput
-                label="Identifiant URL"
+                label={c.slug}
                 value={currentForm.slug}
                 onChange={(value) => setField('slug', value)}
                 required
                 maxLength={editing ? 255 : 30}
+                c={c}
               />
-              <TextArea label="Description originale" value={currentForm.description} onChange={(value) => setField('description', value)} minLength={300} required />
+              <TextArea label={c.originalDescription} value={currentForm.description} onChange={(value) => setField('description', value)} minLength={300} required c={c} />
               <ImageUpload
-                label="Image d'affiche visible sur le site"
+                label={c.posterImage}
                 file={imageFiles.film}
                 imageUrl={currentForm.poster_url}
                 onFileChange={(file) => setImageFiles((prev) => ({ ...prev, film: file }))}
                 onUrlChange={(value) => setField('poster_url', value)}
+                c={c}
               />
               <TextInput
-                label="Réalisateur"
+                label={c.director}
                 value={currentForm.director}
                 onChange={(value) => setField('director', value)}
                 required
-                placeholder="Saisir le nom du réalisateur"
+                placeholder={c.directorPlaceholder}
               />
               <div className="grid grid-cols-2 gap-3">
-                <TextInput label="Pays" value={currentForm.country} onChange={(value) => setField('country', value)} />
-                <TextInput label="Année" type="number" value={currentForm.year} onChange={(value) => setField('year', value)} />
+                <TextInput label={c.country} value={currentForm.country} onChange={(value) => setField('country', value)} />
+                <TextInput label={c.year} type="number" value={currentForm.year} onChange={(value) => setField('year', value)} />
               </div>
               <TextInput
-                label="Lien vidéo officiel (YouTube URL ou embed)"
+                label={c.videoUrl}
                 value={currentForm.youtube_embed_url}
                 onChange={(value) => setField('youtube_embed_url', value)}
                 placeholder="https://www.youtube.com/watch?v=..."
               />
               <MultiSelectDropdown
-                label="Genres"
-                options={data.genres}
+                label={c.genres}
+                options={filmOptions.genres}
                 value={currentForm.genres}
                 onChange={(value) => setField('genres', value)}
-                placeholder="Sélectionner les genres"
-                searchPlaceholder="Rechercher un genre..."
-                emptyMessage="Aucun genre trouvé."
+                placeholder={c.selectGenres}
+                searchPlaceholder={c.searchGenre}
+                emptyMessage={c.noGenre}
               />
               <MultiSelectDropdown
-                label="Acteurs"
-                options={data.actors}
+                label={c.actors}
+                options={filmOptions.actors}
                 value={currentForm.actors}
                 onChange={(value) => setField('actors', value)}
                 valueKey="id"
-                placeholder="Sélectionner les acteurs"
-                searchPlaceholder="Rechercher un acteur..."
-                emptyMessage="Aucun acteur trouvé."
+                placeholder={c.selectActors}
+                searchPlaceholder={c.searchActor}
+                emptyMessage={c.noActor}
               />
             </>
           )}
 
           {activeType === 'actor' && (
             <>
-              <TextInput label="Nom" value={currentForm.name} onChange={(value) => setField('name', value)} required />
-              <TextArea label="Biographie originale" value={currentForm.biography} onChange={(value) => setField('biography', value)} minLength={150} />
-              <TextInput label="Date de naissance" type="date" value={currentForm.birth_date} onChange={(value) => setField('birth_date', value)} />
+              <TextInput label={c.name} value={currentForm.name} onChange={(value) => setField('name', value)} required />
+              <TextArea label={c.originalBio} value={currentForm.biography} onChange={(value) => setField('biography', value)} minLength={150} c={c} />
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <TextArea label={c.englishBio} value={currentForm.biography_en} onChange={(value) => setField('biography_en', value)} minLength={150} c={c} />
+                <p className="mt-2 text-xs text-blue-800">{c.translationHint}</p>
+              </div>
+              <div>
+                <TextInput label={c.birthDate} type="date" value={currentForm.birth_date} onChange={(value) => setField('birth_date', value)} />
+                <p className="mt-1 text-xs text-gray-500">{c.birthHelp}</p>
+              </div>
               <ImageUpload
-                label="Photo de l'acteur"
+                label={c.actorPhoto}
                 file={imageFiles.actor}
                 imageUrl={currentForm.photo_url}
                 onFileChange={(file) => setImageFiles((prev) => ({ ...prev, actor: file }))}
                 onUrlChange={(value) => setField('photo_url', value)}
                 previewClassName="aspect-square"
+                c={c}
               />
             </>
           )}
 
           {activeType === 'article' && (
             <>
-              <TextInput label="Titre" value={currentForm.title} onChange={(value) => setField('title', value)} required />
+              <TextInput label={c.titleLabel} value={currentForm.title} onChange={(value) => setField('title', value)} required />
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <TextInput label={c.englishTitle} value={currentForm.title_en} onChange={(value) => setField('title_en', value)} />
+                <p className="mt-2 text-xs text-blue-800">{c.translationHint}</p>
+              </div>
               <label className="block">
-                <span className="block text-sm font-semibold text-gray-700 mb-1">Catégorie</span>
+                <span className="block text-sm font-semibold text-gray-700 mb-1">{c.category}</span>
                 <select
                   value={currentForm.category}
                   onChange={(event) => setField('category', event.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
                 >
-                  {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                  {categories.map((category) => <option key={category} value={category}>{c.categoryLabels?.[category] || category}</option>)}
                 </select>
               </label>
-              <TextArea label="Contenu original" value={currentForm.content} onChange={(value) => setField('content', value)} minLength={600} required />
+              <TextArea label={c.originalContent} value={currentForm.content} onChange={(value) => setField('content', value)} minLength={600} required c={c} />
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <TextArea label={c.englishContent} value={currentForm.content_en} onChange={(value) => setField('content_en', value)} minLength={600} c={c} />
+                <p className="mt-2 text-xs text-blue-800">{c.translationHint}</p>
+              </div>
               <ImageUpload
-                label="Image principale"
+                label={c.mainImage}
                 file={imageFiles.article}
                 imageUrl={currentForm.featured_image}
                 onFileChange={(file) => setImageFiles((prev) => ({ ...prev, article: file }))}
                 onUrlChange={(value) => setField('featured_image', value)}
                 previewClassName="aspect-video"
+                c={c}
               />
-              <TextInput label="Auteur" value={currentForm.author} onChange={(value) => setField('author', value)} />
+              <TextInput label={c.author} value={currentForm.author} onChange={(value) => setField('author', value)} />
             </>
           )}
 
           {activeType === 'genre' && (
             <>
-              <TextInput label="Nom" value={currentForm.name} onChange={(value) => setField('name', value)} required />
-              <TextArea label="Introduction SEO du genre" value={currentForm.description} onChange={(value) => setField('description', value)} />
+              <TextInput label={c.name} value={currentForm.name} onChange={(value) => setField('name', value)} required />
+              <TextArea label={c.seoIntro} value={currentForm.description} onChange={(value) => setField('description', value)} c={c} />
             </>
           )}
 
@@ -510,12 +551,12 @@ const AdminContentManager = ({ user }) => {
               className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-semibold"
             >
               <FiSave size={16} />
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
+              {saving ? c.saving : c.save}
             </button>
             {editing && (
               <button type="button" onClick={resetForm} className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
                 <FiX size={16} />
-                Annuler
+                {c.cancel}
               </button>
             )}
           </div>
@@ -531,7 +572,8 @@ const AdminContentManager = ({ user }) => {
                 status={filmStatus}
                 setStatus={setFilmStatus}
                 onSubmit={applyTableFilters}
-                placeholder="Mots clés: titre, acteur, réalisateur, genre..."
+                placeholder={c.filmSearch}
+                c={c}
               />
             </div>
           )}
@@ -543,7 +585,8 @@ const AdminContentManager = ({ user }) => {
                 status={actorStatus}
                 setStatus={setActorStatus}
                 onSubmit={applyTableFilters}
-                placeholder="Mots clés: nom, biographie..."
+                placeholder={c.actorSearch}
+                c={c}
               />
             </div>
           )}
@@ -555,7 +598,8 @@ const AdminContentManager = ({ user }) => {
                 status={articleStatus}
                 setStatus={setArticleStatus}
                 onSubmit={applyTableFilters}
-                placeholder="Mots clés: titre, contenu, catégorie, auteur..."
+                placeholder={c.articleSearch}
+                c={c}
               />
             </div>
           )}
@@ -570,6 +614,9 @@ const AdminContentManager = ({ user }) => {
               onArchive={(item) => requestArchive(activeType, item)}
               onRestore={(item) => requestRestore(activeType, item)}
               canDelete={activeType === 'film' ? canArchiveFilm : activeType === 'article' ? canArchiveArticle : activeType === 'actor' ? user?.role === 'admin' || user?.role === 'editor' : canDelete}
+              c={c}
+              locale={c.locale}
+              emptyDate={c.emptyDate}
             />
           )}
         </div>
@@ -578,6 +625,7 @@ const AdminContentManager = ({ user }) => {
         action={pendingAction}
         onCancel={() => setPendingAction(null)}
         onConfirm={executePendingAction}
+        c={c}
       />
     </section>
   );
@@ -676,7 +724,7 @@ const previewSlug = (value = '') => value
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
 
-const SlugInput = ({ label, value, onChange, required, maxLength = 255 }) => {
+const SlugInput = ({ label, value, onChange, required, maxLength = 255, c }) => {
   const slug = previewSlug(value);
 
   return (
@@ -688,17 +736,17 @@ const SlugInput = ({ label, value, onChange, required, maxLength = 255 }) => {
         onChange={(event) => onChange(event.target.value)}
         required={required}
         maxLength={maxLength}
-        placeholder="exemple: mon-film-special"
+        placeholder={c.slugPlaceholder}
         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
       />
       <span className="mt-1 block text-xs text-gray-500">
-        URL finale normalisée: /films/{previewSlug(slug) || 'votre-mot'} · {slug.length}/{maxLength}
+        {c.finalUrl}: /films/{previewSlug(slug) || c.yourWord} · {slug.length}/{maxLength}
       </span>
     </label>
   );
 };
 
-const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange, previewClassName = 'aspect-[2/3]' }) => {
+const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange, previewClassName = 'aspect-[2/3]', c }) => {
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : imageUrl), [file, imageUrl]);
 
   useEffect(() => {
@@ -713,7 +761,7 @@ const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange, preview
       <div className="grid gap-3 sm:grid-cols-[96px_1fr]">
         <div className={`relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 ${previewClassName}`}>
           {previewUrl ? (
-            <img src={previewUrl} alt="Aperçu image" className="h-full w-full object-cover" />
+            <img src={previewUrl} alt={c.imagePreview} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-gray-400">
               <FiImage size={28} />
@@ -728,7 +776,7 @@ const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange, preview
         <div className="space-y-2">
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-red-300 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">
             <FiUpload size={16} />
-            Uploader une image
+            {c.uploadImage}
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
@@ -740,17 +788,17 @@ const ImageUpload = ({ label, file, imageUrl, onFileChange, onUrlChange, preview
             type="url"
             value={imageUrl}
             onChange={(event) => onUrlChange(event.target.value)}
-            placeholder="ou coller une URL d'image"
+            placeholder={c.pasteImageUrl}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-red-500"
           />
-          <p className="text-xs text-gray-500">JPG, PNG, WebP ou GIF, 5 Mo maximum.</p>
+          <p className="text-xs text-gray-500">{c.imageHelp}</p>
         </div>
       </div>
     </div>
   );
 };
 
-const TextArea = ({ label, value, onChange, minLength, required }) => (
+const TextArea = ({ label, value, onChange, minLength, required, c }) => (
   <label className="block">
     <span className="block text-sm font-semibold text-gray-700 mb-1">{label}</span>
     <textarea
@@ -761,7 +809,7 @@ const TextArea = ({ label, value, onChange, minLength, required }) => (
       rows={5}
       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none resize-y"
     />
-    {minLength && <span className="text-xs text-gray-500">{value.length}/{minLength} caractères minimum</span>}
+    {minLength && <span className="text-xs text-gray-500">{value.length}/{minLength} {c.minimumCharacters}</span>}
   </label>
 );
 
@@ -771,25 +819,12 @@ const canManageRow = (type, item, user, canDelete) => {
   return user?.role === 'editor' && String(item.created_by ?? item.createdBy ?? '') === String(user?.id ?? '');
 };
 
-const archiveActionLabels = {
-  archive: {
-    title: 'Confirmer l’archivage',
-    warning: 'Ce contenu ne sera plus visible publiquement. Vous pourrez le désarchiver plus tard depuis cet espace.',
-    firstLabel: 'Archiver ?',
-    finalLabel: 'Archiver',
-  },
-  restore: {
-    title: 'Confirmer le désarchivage',
-    warning: 'Ce contenu redeviendra disponible selon ses règles de publication. Vérifiez qu’il est prêt à être restauré.',
-    firstLabel: 'Désarchiver ?',
-    finalLabel: 'Désarchiver',
-  },
-};
-
-const ArchiveConfirmDialog = ({ action, onCancel, onConfirm }) => {
+const ArchiveConfirmDialog = ({ action, onCancel, onConfirm, c }) => {
   if (!action) return null;
 
-  const labels = archiveActionLabels[action.mode];
+  const labels = action.mode === 'archive'
+    ? { title: c.confirmArchive, warning: c.archiveWarning, firstLabel: c.archiveQuestion, finalLabel: c.archive }
+    : { title: c.confirmRestore, warning: c.restoreWarning, firstLabel: c.restoreQuestion, finalLabel: c.restore };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -809,7 +844,7 @@ const ArchiveConfirmDialog = ({ action, onCancel, onConfirm }) => {
             onClick={onCancel}
             className="rounded-lg border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50"
           >
-            Annuler
+            {c.cancel}
           </button>
           <button
             type="button"
@@ -824,15 +859,15 @@ const ArchiveConfirmDialog = ({ action, onCancel, onConfirm }) => {
   );
 };
 
-const ContentTable = ({ type, rows, user, onEdit, onArchive, onRestore, canDelete }) => (
+const ContentTable = ({ type, rows, user, onEdit, onArchive, onRestore, canDelete, c, locale, emptyDate }) => (
   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-gray-600">
           <tr>
-            <th className="text-left px-4 py-3">Contenu</th>
-            <th className="text-left px-4 py-3">Détails</th>
-            <th className="text-right px-4 py-3">Actions</th>
+            <th className="text-left px-4 py-3">{c.content}</th>
+            <th className="text-left px-4 py-3">{c.details}</th>
+            <th className="text-right px-4 py-3">{c.actions}</th>
           </tr>
         </thead>
         <tbody>
@@ -847,10 +882,10 @@ const ContentTable = ({ type, rows, user, onEdit, onArchive, onRestore, canDelet
                 <p className="text-gray-500">{item.slug}</p>
               </td>
               <td className="px-4 py-3 text-gray-600">
-                {type === 'film' && <span>{item.year || 'Année ?'} · {item.status || 'published'} · {Number(item.views || 0).toLocaleString()} vues</span>}
-                {type === 'actor' && <span>{item.status || 'published'} · {truncateText(item.biography || 'Biographie non renseignée', 90)}</span>}
-                {type === 'article' && <span>{item.category} · {item.status || 'published'} · {formatDate(item.published_at || item.created_at)}</span>}
-                {type === 'genre' && <span>{item.status || 'published'} · {truncateText(item.description || 'Introduction non renseignée', 90)}</span>}
+                {type === 'film' && <span>{item.year || c.unknownYear} · {item.status || 'published'} · {Number(item.views || 0).toLocaleString()} {c.views}</span>}
+                {type === 'actor' && <span>{item.status || 'published'} · {truncateText(item.biography || c.missingBio, 90)}</span>}
+                {type === 'article' && <span>{item.category} · {item.status || 'published'} · {formatDate(item.published_at || item.created_at, locale, emptyDate)}</span>}
+                {type === 'genre' && <span>{item.status || 'published'} · {truncateText(item.description || c.missingIntro, 90)}</span>}
               </td>
               <td className="px-4 py-3">
                 <div className="flex justify-end gap-2">
@@ -860,7 +895,7 @@ const ContentTable = ({ type, rows, user, onEdit, onArchive, onRestore, canDelet
                     className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
                   >
                     <FiEdit3 size={16} />
-                    Modifier
+                    {c.edit}
                   </button>
                   <button
                     onClick={() => canManage && (isArchived ? onRestore(item) : onArchive(item))}
@@ -872,7 +907,7 @@ const ContentTable = ({ type, rows, user, onEdit, onArchive, onRestore, canDelet
                     }`}
                   >
                     <FiArchive size={16} />
-                    {isArchived ? 'Désarchiver' : 'Archiver'}
+                    {isArchived ? c.restore : c.archive}
                   </button>
                 </div>
               </td>
@@ -882,7 +917,7 @@ const ContentTable = ({ type, rows, user, onEdit, onArchive, onRestore, canDelet
           {!rows.length && (
             <tr>
               <td colSpan="3" className="px-4 py-8 text-center text-gray-500">
-                Aucun contenu disponible.
+                {c.noContent}
               </td>
             </tr>
           )}

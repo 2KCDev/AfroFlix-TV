@@ -1,9 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useLocale } from '../../hooks/useLocale';
+import { getLocalizedArticleExcerpt, localizeArticleCategory } from '../../utils/content';
 
 const ArticleCard = ({ article, horizontal = false }) => {
+  const { language, t } = useLocale();
   const image = article.featured_image || article.imageUrl;
+  const title = language === 'en' && article.title_en?.trim() ? article.title_en : article.title;
+  const content = language === 'en' && article.content_en?.trim() ? article.content_en : article.content;
+  const excerpt = getLocalizedArticleExcerpt(article, language, horizontal ? 200 : 100);
   const date = article.published_at || article.created_at || article.createdAt;
+  const dateLabel = date
+    ? new Date(date).toLocaleDateString(language === 'en' ? 'en-GB' : 'fr-FR')
+    : t('card.comingSoon');
 
   if (horizontal) {
     return (
@@ -14,24 +23,24 @@ const ArticleCard = ({ article, horizontal = false }) => {
         <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
           <div className="md:col-span-2">
             <span className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-800">
-              {article.category}
+              {localizeArticleCategory(article.category, language) || t('card.article')}
             </span>
             <h3 className="mt-3 text-2xl font-bold text-gray-900 transition hover:text-red-600">
-              {article.title}
+              {title}
             </h3>
             <p className="mb-4 mt-2 line-clamp-3 text-gray-600">
-              {article.excerpt || article.content?.substring(0, 200)}...
+              {excerpt || content?.substring(0, 200)}...
             </p>
             <div className="flex gap-4 text-sm text-gray-500">
-              <span>{date ? new Date(date).toLocaleDateString('fr-FR') : 'Date à venir'}</span>
-              <span>{article.readTime || '5'} min de lecture</span>
+              <span>{dateLabel}</span>
+              <span>{article.readTime || '5'} {language === 'en' ? 'min read' : 'min de lecture'}</span>
             </div>
           </div>
           {image && (
             <div className="md:col-span-1">
               <img
                 src={image}
-                alt={article.title}
+                alt={title}
                 loading="lazy"
                 decoding="async"
                 className="h-40 w-full rounded-lg object-cover md:h-full"
@@ -54,16 +63,16 @@ const ArticleCard = ({ article, horizontal = false }) => {
       >
         {image && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 transition group-hover:from-black/85" />}
         <h3 className={`relative line-clamp-3 text-lg font-bold transition ${image ? 'text-white' : 'text-gray-800 group-hover:text-red-600'}`}>
-          {article.title}
+          {title}
         </h3>
       </div>
       <div className="p-4">
         <p className="mb-2 line-clamp-2 text-sm text-gray-600">
-          {article.excerpt || article.content?.substring(0, 100)}...
+          {excerpt || content?.substring(0, 100)}...
         </p>
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span className="font-semibold text-orange-600">{article.category}</span>
-          <span>{date ? new Date(date).toLocaleDateString('fr-FR') : 'Date à venir'}</span>
+          <span className="font-semibold text-orange-600">{localizeArticleCategory(article.category, language) || t('card.article')}</span>
+          <span>{dateLabel}</span>
         </div>
       </div>
     </Link>

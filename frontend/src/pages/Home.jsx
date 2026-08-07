@@ -9,8 +9,25 @@ import SEO from '../components/common/SEO';
 import FilmGrid from '../components/films/FilmGrid';
 import EditorialRequirements from '../components/sections/EditorialRequirements';
 import { useActors, useArticles, useFilms, useTrendingFilms } from '../hooks/useFilms';
+import { useLocale } from '../hooks/useLocale';
 
 const Home = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? {
+    seoTitle: 'Films, actors and African cinema news', seoDescription: 'Discover popular films, trends, actors and articles about African cinema on AfroFlix.TV.',
+    welcome: 'Welcome to AfroFlix.TV', hero: 'Discover the best films, the most popular actors and the latest African cinema news. AfroFlix.TV shines a light on the works, talent and richness of African cinema.',
+    explore: 'Explore films', articles: 'Read articles', popular: 'Popular films', popularText: 'The titles most viewed by the community.', all: 'View all', popularError: 'Popular films are temporarily unavailable. Please try again shortly.', noFilm: 'No films available at the moment.',
+    trending: 'Trending', trendingText: 'The most watched and popular films this week.', more: 'View more', trendingError: 'Trending films are temporarily unavailable. Please try again shortly.', noTrending: 'No trending films at the moment.',
+    latest: 'Latest films', latestText: 'Discover the films newly added to our platform.', latestError: 'Latest films are temporarily unavailable. Please try again shortly.', blogText: 'Latest news, interviews, reviews and analyses from African cinema.', allArticles: 'View all articles', articlesError: 'Articles are temporarily unavailable. Please try again shortly.', noArticle: 'No articles available at the moment.',
+    popularActors: 'Popular actors', actorsText: 'Discover the profiles, careers and filmographies of African cinema actors.', actorsError: 'Actors are temporarily unavailable. Please try again shortly.', noActor: 'No actors available at the moment.', join: 'Join the AfroFlix.TV community', joinText: 'Create your free account to rate your favourite films, save favourites, publish reviews and join the AfroFlix.TV community.', signUp: 'Sign up for free',
+  } : {
+    seoTitle: 'Films, acteurs et actualités AfroFlix.TV', seoDescription: 'Découvrez les films populaires, les tendances, les acteurs et les articles du cinéma africain sur AfroFlix.TV.',
+    welcome: 'Bienvenue sur AfroFlix.TV', hero: 'Découvrez les meilleurs films, les acteurs les plus populaires et les dernières actualités du cinéma africain. AfroFlix.TV met en lumière les œuvres, les talents et la richesse du septième art africain.',
+    explore: 'Explorer les films', articles: 'Lire les articles', popular: 'Films populaires', popularText: 'Les titres les plus consultés par la communauté.', all: 'Voir tous', popularError: 'Les films populaires sont momentanément indisponibles. Réessayez dans quelques instants.', noFilm: 'Aucun film disponible pour le moment.',
+    trending: 'En tendance', trendingText: 'Les films les plus regardés et populaires cette semaine.', more: 'Voir plus', trendingError: 'Les tendances sont momentanément indisponibles. Réessayez dans quelques instants.', noTrending: 'Aucun film en tendance pour le moment.',
+    latest: 'Derniers films', latestText: 'Découvrez les films nouvellement ajoutés à notre plateforme.', latestError: 'Les derniers films sont momentanément indisponibles. Réessayez dans quelques instants.', blogText: 'Les dernières actualités, interviews, critiques et analyses du cinéma africain.', allArticles: 'Voir tous les articles', articlesError: 'Les articles sont momentanément indisponibles. Réessayez dans quelques instants.', noArticle: 'Aucun article disponible pour le moment.',
+    popularActors: 'Acteurs populaires', actorsText: 'Découvrez les profils, les carrières et les filmographies des acteurs du cinéma africain.', actorsError: 'Les acteurs sont momentanément indisponibles. Réessayez dans quelques instants.', noActor: 'Aucun acteur disponible pour le moment.', join: 'Rejoignez la communauté AfroFlix.TV', joinText: 'Créez gratuitement votre compte pour noter vos films préférés, enregistrer vos favoris, publier vos critiques et rejoindre la communauté AfroFlix.TV.', signUp: "S'inscrire gratuitement",
+  };
   const { data: popularData, loading: popularLoading, error: popularError } = useFilms({
     page: 1,
     limit: 6,
@@ -48,8 +65,8 @@ const Home = () => {
   return (
     <div className="space-y-16">
       <SEO
-        title="Films, acteurs et actualités AfroFlix.TV"
-        description="Découvrez les films populaires, les tendances, les acteurs et les articles du cinéma africain sur AfroFlix.TV."
+        title={c.seoTitle}
+        description={c.seoDescription}
       />
 
       {/* Hero Section */}
@@ -60,13 +77,11 @@ const Home = () => {
 
         <div className="relative z-10 container mx-auto px-4 text-center text-white">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-            Bienvenue sur AfroFlix.TV
+            {c.welcome}
           </h1>
 
           <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Découvrez les meilleurs films, les acteurs les plus populaires et les
-            dernières actualités du cinéma africain. AfroFlix.TV met en lumière
-            les œuvres, les talents et la richesse du septième art africain.
+            {c.hero}
           </p>
 
           <div className="flex gap-4 justify-center flex-wrap">
@@ -74,14 +89,14 @@ const Home = () => {
               to="/films"
               className="px-8 py-3 bg-white text-red-600 font-bold rounded-lg hover:bg-gray-100 transition transform hover:scale-105"
             >
-              Explorer les films
+              {c.explore}
             </Link>
 
             <Link
               to="/actualites"
               className="px-8 py-3 border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-red-600 transition"
             >
-              Lire les articles
+              {c.articles}
             </Link>
           </div>
         </div>
@@ -95,11 +110,11 @@ const Home = () => {
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <FiEye className="text-red-600" />
-              Films populaires
+              {c.popular}
             </h2>
 
             <p className="text-gray-600">
-              Les titres les plus consultés par la communauté.
+              {c.popularText}
             </p>
           </div>
 
@@ -107,7 +122,7 @@ const Home = () => {
             to="/films"
             className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 font-semibold transition"
           >
-            Voir tous
+            {c.all}
             <FiArrowRight />
           </Link>
         </div>
@@ -115,13 +130,13 @@ const Home = () => {
         {popularLoading ? (
           <LoadingSpinner />
         ) : popularError ? (
-          <ErrorState message="Les films populaires sont momentanément indisponibles. Réessayez dans quelques instants." />
+          <ErrorState message={c.popularError} />
         ) : popular.length > 0 ? (
           <FilmGrid films={popular} />
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <p className="text-gray-600">
-              Aucun film disponible pour le moment.
+              {c.noFilm}
             </p>
           </div>
         )}
@@ -133,11 +148,11 @@ const Home = () => {
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <FiTrendingUp className="text-orange-500" />
-              En tendance
+              {c.trending}
             </h2>
 
             <p className="text-gray-600">
-              Les films les plus regardés et populaires cette semaine.
+              {c.trendingText}
             </p>
           </div>
 
@@ -145,7 +160,7 @@ const Home = () => {
             to="/films?sortBy=trending"
             className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 font-semibold transition"
           >
-            Voir plus
+            {c.more}
             <FiArrowRight />
           </Link>
         </div>
@@ -153,13 +168,13 @@ const Home = () => {
         {trendingLoading ? (
           <LoadingSpinner />
         ) : trendingError ? (
-          <ErrorState message="Les tendances sont momentanément indisponibles. Réessayez dans quelques instants." />
+          <ErrorState message={c.trendingError} />
         ) : trending.length > 0 ? (
           <FilmGrid films={trending} />
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <p className="text-gray-600">
-              Aucun film en tendance pour le moment.
+              {c.noTrending}
             </p>
           </div>
         )}
@@ -170,11 +185,11 @@ const Home = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Derniers films
+              {c.latest}
             </h2>
 
             <p className="text-gray-600">
-              Découvrez les films nouvellement ajoutés à notre plateforme.
+              {c.latestText}
             </p>
           </div>
 
@@ -182,7 +197,7 @@ const Home = () => {
             to="/films"
             className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 font-semibold transition"
           >
-            Voir tous
+            {c.all}
             <FiArrowRight />
           </Link>
         </div>
@@ -190,13 +205,13 @@ const Home = () => {
         {filmsLoading ? (
           <LoadingSpinner />
         ) : filmsError ? (
-          <ErrorState message="Les derniers films sont momentanément indisponibles. Réessayez dans quelques instants." />
+          <ErrorState message={c.latestError} />
         ) : films.length > 0 ? (
           <FilmGrid films={films} />
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <p className="text-gray-600">
-              Aucun film disponible pour le moment.
+              {c.noFilm}
             </p>
           </div>
         )}
@@ -212,8 +227,7 @@ const Home = () => {
             </h2>
 
             <p className="text-gray-600">
-              Les dernières actualités, interviews, critiques et analyses du
-              cinéma africain.
+              {c.blogText}
             </p>
           </div>
 
@@ -221,7 +235,7 @@ const Home = () => {
             to="/actualites"
             className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 font-semibold transition"
           >
-            Voir tous les articles
+            {c.allArticles}
             <FiArrowRight />
           </Link>
         </div>
@@ -229,7 +243,7 @@ const Home = () => {
         {articlesLoading ? (
           <LoadingSpinner />
         ) : articlesError ? (
-          <ErrorState message="Les articles sont momentanément indisponibles. Réessayez dans quelques instants." />
+          <ErrorState message={c.articlesError} />
         ) : articles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {articles.map((article) => (
@@ -242,7 +256,7 @@ const Home = () => {
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <p className="text-gray-600">
-              Aucun article disponible pour le moment.
+              {c.noArticle}
             </p>
           </div>
         )}
@@ -254,12 +268,11 @@ const Home = () => {
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <FiUsers className="text-red-600" />
-              Acteurs populaires
+              {c.popularActors}
             </h2>
 
             <p className="text-gray-600">
-              Découvrez les profils, les carrières et les filmographies des
-              acteurs du cinéma africain.
+              {c.actorsText}
             </p>
           </div>
 
@@ -267,7 +280,7 @@ const Home = () => {
             to="/acteurs"
             className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 font-semibold transition"
           >
-            Voir tous
+            {c.all}
             <FiArrowRight />
           </Link>
         </div>
@@ -275,13 +288,13 @@ const Home = () => {
         {actorsLoading ? (
           <LoadingSpinner />
         ) : actorsError ? (
-          <ErrorState message="Les acteurs sont momentanément indisponibles. Réessayez dans quelques instants." />
+          <ErrorState message={c.actorsError} />
         ) : actors.length > 0 ? (
           <ActorGrid actors={actors} />
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <p className="text-gray-600">
-              Aucun acteur disponible pour le moment.
+              {c.noActor}
             </p>
           </div>
         )}
@@ -290,20 +303,18 @@ const Home = () => {
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg text-white text-center">
         <h2 className="text-4xl font-bold mb-4">
-          Rejoignez la communauté AfroFlix.TV
+          {c.join}
         </h2>
 
         <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
-          Créez gratuitement votre compte pour noter vos films préférés,
-          enregistrer vos favoris, publier vos critiques et rejoindre la
-          communauté AfroFlix.TV.
+          {c.joinText}
         </p>
 
         <Link
           to="/auth"
           className="inline-block px-8 py-3 bg-white text-red-600 font-bold rounded-lg hover:bg-gray-100 transition transform hover:scale-105"
         >
-          S'inscrire gratuitement
+          {c.signUp}
         </Link>
       </section>
     </div>

@@ -3,12 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiSearch } from 'react-icons/fi';
 import { api } from '../../services/api';
 import { trackEvent } from '../../services/analytics';
-
-const typeLabels = {
-  film: 'Film',
-  actor: 'Acteur',
-  article: 'Article',
-};
+import { useLocale } from '../../hooks/useLocale';
 
 const itemPath = (item) => {
   if (item.type === 'actor') return `/acteurs/${item.slug}`;
@@ -26,11 +21,12 @@ const SearchSuggest = ({
   value,
   onChange,
   onSubmit,
-  placeholder = 'Rechercher par mots clés...',
+  placeholder,
   autoFocus = false,
   inputClassName = '',
   autoSubmit = false,
 }) => {
+  const { language, t } = useLocale();
   const navigate = useNavigate();
   const [liveResults, setLiveResults] = useState([]);
   const [focused, setFocused] = useState(false);
@@ -49,13 +45,13 @@ const SearchSuggest = ({
     }
 
     const timer = window.setTimeout(() => {
-      api.search(term)
+      api.search(term, { lang: language })
         .then((results) => setLiveResults(normalizeResults(results).slice(0, 6)))
         .catch(() => setLiveResults([]));
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [term]);
+  }, [language, term]);
 
   useEffect(() => {
     if (!autoSubmit || !onSubmitRef.current) return undefined;
@@ -88,7 +84,7 @@ const SearchSuggest = ({
           onChange={(event) => onChange(event.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => window.setTimeout(() => setFocused(false), 150)}
-          placeholder={placeholder}
+          placeholder={placeholder || t('search.placeholder')}
           autoFocus={autoFocus}
           aria-autocomplete="list"
           aria-controls={suggestionsId}
@@ -105,7 +101,7 @@ const SearchSuggest = ({
                 className="block px-4 py-3 text-sm hover:bg-red-50"
               >
                 <span className="font-semibold text-gray-900">{item.label}</span>
-                <span className="ml-2 text-gray-500">{typeLabels[item.type]}</span>
+                <span className="ml-2 text-gray-500">{item.type === 'actor' ? t('search.actor') : item.type === 'article' ? t('card.article') : t('common.films')}</span>
               </Link>
             ))}
           </div>

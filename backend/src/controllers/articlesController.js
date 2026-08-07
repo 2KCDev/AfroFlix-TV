@@ -156,16 +156,16 @@ const createArticle = async (req, res) => {
     if (validation.error) {
       return res.status(400).json({ error: validation.error });
     }
-    const { title, content, category, featured_image, author } = validation.value;
+    const { title, title_en, content, content_en, category, featured_image, author } = validation.value;
 
     // Generate slug
     const slug = articleSlugify(title);
 
     const result = await pool.query(
-      `INSERT INTO articles (title, slug, content, category, featured_image, author, status, published_at, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8)
+      `INSERT INTO articles (title, title_en, slug, content, content_en, category, featured_image, author, status, published_at, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, $10)
        RETURNING *`,
-      [title, slug, content, category, featured_image, author || 'Rédaction AfroFlix.TV', 'published', req.user.id]
+      [title, title_en || null, slug, content, content_en || null, category, featured_image, author || 'Rédaction AfroFlix.TV', 'published', req.user.id]
     );
 
     res.status(201).json({ message: 'Article created successfully', article: result.rows[0] });
@@ -189,7 +189,7 @@ const updateArticle = async (req, res) => {
     if (validation.error) {
       return res.status(400).json({ error: validation.error });
     }
-    const { title, content, category, featured_image, author, status } = validation.value;
+    const { title, title_en, content, content_en, category, featured_image, author, status } = validation.value;
 
     const updateFields = [];
     const updateValues = [];
@@ -202,9 +202,17 @@ const updateArticle = async (req, res) => {
       updateFields.push(`title = $${paramIndex++}`);
       updateValues.push(title);
     }
+    if (title_en !== undefined) {
+      updateFields.push(`title_en = $${paramIndex++}`);
+      updateValues.push(title_en || null);
+    }
     if (content !== undefined) {
       updateFields.push(`content = $${paramIndex++}`);
       updateValues.push(content);
+    }
+    if (content_en !== undefined) {
+      updateFields.push(`content_en = $${paramIndex++}`);
+      updateValues.push(content_en || null);
     }
     if (category !== undefined) {
       updateFields.push(`category = $${paramIndex++}`);

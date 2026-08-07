@@ -1,7 +1,9 @@
 import React from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { useLocale } from '../../hooks/useLocale';
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  const { language } = useLocale();
   if (totalPages <= 1) return null;
 
   const getPaginationItems = () => {
@@ -40,7 +42,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
       >
         <FiChevronLeft size={18} />
-        <span className="hidden sm:inline">Précédent</span>
+        <span className="hidden sm:inline">{language === 'en' ? 'Previous' : 'Précédent'}</span>
       </button>
 
       {/* Page Numbers */}
@@ -72,7 +74,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         disabled={currentPage === totalPages}
         className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
       >
-        <span className="hidden sm:inline">Suivant</span>
+        <span className="hidden sm:inline">{language === 'en' ? 'Next' : 'Suivant'}</span>
         <FiChevronRight size={18} />
       </button>
     </div>

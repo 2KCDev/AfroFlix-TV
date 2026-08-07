@@ -7,8 +7,12 @@ import FilmCard from '../components/cards/FilmCard';
 import SearchSuggest from '../components/common/SearchSuggest';
 import { api } from '../services/api';
 import { trackEvent } from '../services/analytics';
+import { useLocale } from '../hooks/useLocale';
+import { getLocalizedArticleExcerpt, localizeArticleCategory } from '../utils/content';
 
 const SearchPage = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? { search: 'Search', intro: 'Explore our database of films, actors and articles', placeholder: 'Search for a film, actor or article…', genre: 'Genre', allGenres: 'All genres', year: 'Year', example: 'E.g. 2024', films: 'Films', actors: 'Actors', articles: 'Articles', noResults: 'No results for', tryAgain: 'Try other keywords', start: 'Enter a search term to get started', film: 'film', filmsPlural: 'films' } : { search: 'Recherche', intro: 'Explorez notre base de données de films, acteurs et articles', placeholder: 'Chercher un film, un acteur, un article…', genre: 'Genre', allGenres: 'Tous les genres', year: 'Année', example: 'Ex. 2024', films: 'Films', actors: 'Acteurs', articles: 'Articles', noResults: 'Aucun résultat pour', tryAgain: "Essayez d'autres mots clés", start: 'Entrez un terme de recherche pour commencer', film: 'film', filmsPlural: 'films' };
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const [genre, setGenre] = useState(searchParams.get('genre') || '');
@@ -28,7 +32,7 @@ const SearchPage = () => {
     setLoading(true);
     try {
       const requests = [];
-      if (cleanTerm.length >= 2) requests.push(api.search(cleanTerm));
+      if (cleanTerm.length >= 2) requests.push(api.search(cleanTerm, { lang: language }));
       if (genre || year) {
         requests.push(api.films({
           page: 1,
@@ -63,7 +67,7 @@ const SearchPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [genre, searchTerm, setSearchParams, year]);
+  }, [genre, language, searchTerm, setSearchParams, year]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -83,12 +87,12 @@ const SearchPage = () => {
 
   return (
     <div className="space-y-8">
-      <Breadcrumbs items={[{ label: 'Recherche' }]} />
+      <Breadcrumbs items={[{ label: c.search }]} />
 
       <div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Recherche</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">{c.search}</h1>
         <p className="text-gray-600">
-          Explorez notre base de données de films, acteurs et articles
+          {c.intro}
         </p>
       </div>
 
@@ -98,33 +102,33 @@ const SearchPage = () => {
           value={searchTerm}
           onChange={setSearchTerm}
           onSubmit={handleSearch}
-          placeholder="Chercher un film, un acteur, un article..."
+          placeholder={c.placeholder}
           inputClassName="text-lg"
           autoFocus
         />
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <label className="block">
-            <span className="block text-sm font-semibold text-gray-700 mb-1">Genre</span>
+            <span className="block text-sm font-semibold text-gray-700 mb-1">{c.genre}</span>
             <select
               value={genre}
               onChange={(event) => setGenre(event.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-red-500"
             >
-              <option value="">Tous les genres</option>
+              <option value="">{c.allGenres}</option>
               {genres.map((item) => (
                 <option key={item.id} value={item.slug}>{item.name}</option>
               ))}
             </select>
           </label>
           <label className="block">
-            <span className="block text-sm font-semibold text-gray-700 mb-1">Année</span>
+            <span className="block text-sm font-semibold text-gray-700 mb-1">{c.year}</span>
             <input
               type="number"
               min="1900"
               max={new Date().getFullYear() + 2}
               value={year}
               onChange={(event) => setYear(event.target.value)}
-              placeholder="Ex. 2024"
+              placeholder={c.example}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-red-500"
             />
           </label>
@@ -140,7 +144,7 @@ const SearchPage = () => {
           {results.films && results.films.length > 0 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Films ({results.films.length})
+                {c.films} ({results.films.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {results.films.map((film) => (
@@ -154,7 +158,7 @@ const SearchPage = () => {
           {results.actors && results.actors.length > 0 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Acteurs ({results.actors.length})
+                {c.actors} ({results.actors.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {results.actors.map((actor) => (
@@ -171,7 +175,7 @@ const SearchPage = () => {
                     <div className="p-4">
                       <h3 className="font-bold text-gray-900">{actor.name}</h3>
                       <p className="text-sm text-gray-600">
-                        {actor.film_count || actor.filmCount || 0} film(s)
+                        {actor.film_count || actor.filmCount || 0} {(actor.film_count || actor.filmCount || 0) === 1 ? c.film : c.filmsPlural}
                       </p>
                     </div>
                   </Link>
@@ -184,7 +188,7 @@ const SearchPage = () => {
           {results.articles && results.articles.length > 0 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Articles ({results.articles.length})
+                {c.articles} ({results.articles.length})
               </h2>
               <div className="space-y-4">
                 {results.articles.map((article) => (
@@ -197,10 +201,10 @@ const SearchPage = () => {
                       {article.title}
                     </h3>
                     <p className="text-gray-600 mb-3">
-                      {article.excerpt || article.content?.substring(0, 150)}...
+                      {getLocalizedArticleExcerpt(article, language, 150)}...
                     </p>
                     <span className="text-xs bg-red-100 text-red-800 px-3 py-1 rounded">
-                      {article.category}
+                      {localizeArticleCategory(article.category, language)}
                     </span>
                   </Link>
                 ))}
@@ -214,10 +218,10 @@ const SearchPage = () => {
             (!results.articles || results.articles.length === 0) && (
               <div className="text-center py-16 bg-gray-50 rounded-lg">
                 <p className="text-gray-600 text-lg font-semibold">
-                  Aucun résultat pour "{searchTerm}"
+                  {c.noResults} "{searchTerm}"
                 </p>
                 <p className="text-gray-500 mt-2">
-                  Essayez d'autres mots clés
+                  {c.tryAgain}
                 </p>
               </div>
             )}
@@ -225,7 +229,7 @@ const SearchPage = () => {
       ) : (
         <div className="text-center py-16 bg-gray-50 rounded-lg">
           <p className="text-gray-600 text-lg font-semibold">
-            Entrez un terme de recherche pour commencer
+            {c.start}
           </p>
         </div>
       )}

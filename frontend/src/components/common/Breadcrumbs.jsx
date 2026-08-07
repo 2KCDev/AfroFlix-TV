@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiChevronRight } from 'react-icons/fi';
+import { useLocale } from '../../hooks/useLocale';
 
 const Breadcrumbs = ({ items = [] }) => {
-  const crumbs = [{ label: 'Accueil', to: '/' }, ...items];
+  const { language, t } = useLocale();
+  const crumbs = [{ label: t('nav.home'), to: '/' }, ...items];
 
   useEffect(() => {
     const id = 'breadcrumb-structured-data';
@@ -26,10 +28,10 @@ const Breadcrumbs = ({ items = [] }) => {
     document.head.appendChild(script);
 
     return () => document.getElementById(id)?.remove();
-  }, [JSON.stringify(items)]);
+  }, [language, JSON.stringify(items)]);
 
   return (
-    <nav aria-label="Fil d'Ariane" className="text-sm text-gray-500">
+    <nav aria-label={language === 'fr' ? "Fil d'Ariane" : 'Breadcrumb'} className="text-sm text-gray-500">
       <ol className="flex flex-wrap items-center gap-1">
         {crumbs.map((item, index) => (
           <li key={`${item.label}-${index}`} className="flex items-center gap-1">

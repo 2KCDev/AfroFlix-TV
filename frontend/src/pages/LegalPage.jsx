@@ -1,12 +1,15 @@
 import React, { useEffect } from 'react';
 import ContactForm from '../components/forms/ContactForm';
+import { useLocale } from '../hooks/useLocale';
 
 const LegalPage = ({ type = 'about' }) => {
+  const { language } = useLocale();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [type]);
 
   const content = {
+    fr: {
     about: {
       title: 'À propos de AFROFLIX.TV',
       content: `
@@ -132,16 +135,137 @@ const LegalPage = ({ type = 'about' }) => {
         <p>Les contenus publiés sont rédigés à titre informatif et culturel. AFROFLIX.TV ne diffuse pas de films piratés, n'héberge aucun fichier vidéo et privilégie les liens ou intégrations officiellement publiés par les ayants droit.</p>
       `,
     },
+    },
+    en: {
+      about: {
+        title: 'About AFROFLIX.TV',
+        content: `
+          <h2>Who are we?</h2>
+          <p>AFROFLIX.TV is your reference platform for discovering, exploring and appreciating African cinema. Our mission is to make African cinema accessible to a wider audience.</p>
+
+          <h2>Our vision</h2>
+          <p>We believe African cinema is a global cultural treasure that deserves to be celebrated and preserved. We are committed to promoting its films, artists and stories.</p>
+
+          <h2>Our services</h2>
+          <ul>
+            <li>A comprehensive database of African films</li>
+            <li>Detailed profiles of actors and directors</li>
+            <li>Educational articles and analyses</li>
+            <li>A rating and comments system</li>
+            <li>Personalised favourites lists</li>
+          </ul>
+        `,
+      },
+      privacy: {
+        title: 'Privacy policy',
+        content: `
+          <h2>Data collection</h2>
+          <p>We collect the information you voluntarily provide, including your email address, username and preferences.</p>
+
+          <h2>Use of data</h2>
+          <p>Your data is used to:</p>
+          <ul>
+            <li>Maintain your user account</li>
+            <li>Personalise your experience</li>
+            <li>Improve our services</li>
+            <li>Send you updates, where you have agreed to receive them</li>
+          </ul>
+
+          <h2>Data protection</h2>
+          <p>Your personal data is protected by appropriate security measures, including SSL encryption and secure password storage.</p>
+        `,
+      },
+      terms: {
+        title: 'Terms of use',
+        content: `
+          <h2>Acceptance of the terms</h2>
+          <p>By using AFROFLIX.TV, you agree to these terms of use and our privacy policy.</p>
+
+          <h2>Licence to use</h2>
+          <p>We grant you a personal, non-transferable and non-exclusive licence to access and use AFROFLIX.TV.</p>
+
+          <h2>Restrictions</h2>
+          <ul>
+            <li>You may not reproduce or distribute content without permission</li>
+            <li>You may not use the website for commercial purposes without authorisation</li>
+            <li>You agree not to post unlawful or offensive content</li>
+          </ul>
+
+          <h2>Limitation of liability</h2>
+          <p>AFROFLIX.TV is provided “as is”, without warranties. We are not liable for direct or indirect damages.</p>
+        `,
+      },
+      cookies: {
+        title: 'Cookie policy',
+        content: `
+          <h2>What is a cookie?</h2>
+          <p>Cookies and similar technologies remember your preferences, secure browsing and, only with your consent, measure audiences or prepare advertising display.</p>
+
+          <h2>Types of cookies used</h2>
+          <ul>
+            <li><strong>Essential cookies:</strong> required for security, sign-in, consent preferences and the website to function.</li>
+            <li><strong>Audience measurement cookies:</strong> used only after consent to analyse performance and improve our content.</li>
+            <li><strong>Advertising cookies:</strong> disabled by default and enabled only with your consent, including for future advertising integrations.</li>
+          </ul>
+
+          <h2>Your consent</h2>
+          <p>Refusing is as easy as accepting. Your choices are stored locally and can be changed at any time from this page.</p>
+
+          <h2>Managing cookies</h2>
+          <p>You can control cookies from the preferences panel below or in your browser settings. Essential cookies cannot be disabled because they are required for the service you request.</p>
+        `,
+      },
+      contact: {
+        title: 'Contact us',
+        content: `
+          <h2>Contact information</h2>
+          <p>Do you have questions or suggestions? We would love to hear from you.</p>
+          <p><strong>Email:</strong> contact@afroflix-tv.com</p>
+          <p><strong>Response time:</strong> 24–48 hours</p>
+          <h2>Support</h2>
+          <p>For technical issues or questions about your account, please use the contact form or email support@afroflix-tv.com.</p>
+        `,
+      },
+      copyright: {
+        title: 'Copyright / Report content',
+        content: `
+          <h2>Intellectual property</h2>
+          <p>All AFROFLIX.TV content, including text, images, logos and design, is protected by copyright.</p>
+          <h2>User-generated content</h2>
+          <p>By submitting content, including comments and ratings, you grant AFROFLIX.TV a licence to use that content on the website.</p>
+          <h2>Third-party content</h2>
+          <p>Film images and actor information are provided for educational purposes. If you own content and would like it removed, please contact us.</p>
+          <h2>Reporting procedure</h2>
+          <p>If you represent a rights holder and believe a video, image or piece of information published on AFROFLIX.TV infringes your rights, email contact@afroflix-tv.com with the relevant URL, proof of ownership and your contact details. Complete requests are reviewed as a priority.</p>
+        `,
+      },
+      legal: {
+        title: 'Legal notice',
+        content: `
+          <h2>Website publisher</h2>
+          <p>AFROFLIX.TV is an editorial platform dedicated to discovering African cinema. The publisher’s definitive information will be provided here.</p>
+          <h2>Contact</h2>
+          <p>Main email: contact@afroflix-tv.com</p>
+          <p>Technical support: support@afroflix-tv.com</p>
+          <p>General information: info@afroflix-tv.com</p>
+          <h2>Hosting</h2>
+          <p>The hosting provider’s information will be published here once the production provider has been selected.</p>
+          <h2>Editorial responsibility</h2>
+          <p>Published content is for information and cultural purposes. AFROFLIX.TV does not distribute pirated films, host video files or promote unauthorised content; it favours links or embeds officially published by rights holders.</p>
+        `,
+      },
+    },
   };
 
-  const page = content[type] || content.about;
+  const page = content[language]?.[type] || content.fr[type] || content.fr.about;
+  const dateLocale = language === 'en' ? 'en-GB' : 'fr-FR';
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">{page.title}</h1>
         <p className="text-gray-600">
-          Dernière mise à jour: {new Date().toLocaleDateString('fr-FR')}
+          {language === 'en' ? 'Last updated:' : 'Dernière mise à jour:'} {new Date().toLocaleDateString(dateLocale)}
         </p>
       </div>
 
@@ -164,7 +288,7 @@ const LegalPage = ({ type = 'about' }) => {
             onClick={() => window.dispatchEvent(new Event('cookie-consent:open'))}
             className="rounded-lg bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700"
           >
-            Gérer mes préférences cookies
+            {language === 'en' ? 'Manage my cookie preferences' : 'Gérer mes préférences cookies'}
           </button>
         </div>
       ) : (

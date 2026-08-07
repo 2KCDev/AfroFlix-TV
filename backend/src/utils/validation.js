@@ -141,6 +141,7 @@ const schemas = {
   actor: Joi.object({
     name: Joi.string().trim().min(2).max(255).required(),
     biography: Joi.string().trim().min(150).max(10000).allow('', null),
+    biography_en: Joi.string().trim().min(150).max(10000).allow('', null),
     birth_date: Joi.date().iso().max('now').allow('', null),
     photo_url: Joi.string().trim().max(500).allow('', null).custom((value, helpers) => (
       isPublicAssetUrl(value) ? trimString(value) : helpers.message('URL photo invalide.')
@@ -150,6 +151,7 @@ const schemas = {
   actorUpdate: Joi.object({
     name: Joi.string().trim().min(2).max(255),
     biography: Joi.string().trim().min(150).max(10000).allow('', null),
+    biography_en: Joi.string().trim().min(150).max(10000).allow('', null),
     birth_date: Joi.date().iso().max('now').allow('', null),
     photo_url: Joi.string().trim().max(500).allow('', null).custom((value, helpers) => (
       isPublicAssetUrl(value) ? trimString(value) : helpers.message('URL photo invalide.')
@@ -158,7 +160,9 @@ const schemas = {
 
   article: Joi.object({
     title: Joi.string().trim().min(5).max(255).required(),
+    title_en: Joi.string().trim().min(5).max(255).allow('', null),
     content: Joi.string().trim().min(600).max(50000).required(),
+    content_en: Joi.string().trim().min(600).max(50000).allow('', null),
     category: Joi.string().valid(...ARTICLE_CATEGORIES).required(),
     featured_image: Joi.string().trim().max(500).allow('', null).custom((value, helpers) => (
       isPublicAssetUrl(value) ? trimString(value) : helpers.message('Image article invalide.')
@@ -168,7 +172,9 @@ const schemas = {
 
   articleUpdate: Joi.object({
     title: Joi.string().trim().min(5).max(255),
+    title_en: Joi.string().trim().min(5).max(255).allow('', null),
     content: Joi.string().trim().min(600).max(50000),
+    content_en: Joi.string().trim().min(600).max(50000).allow('', null),
     category: Joi.string().valid(...ARTICLE_CATEGORIES),
     featured_image: Joi.string().trim().max(500).allow('', null).custom((value, helpers) => (
       isPublicAssetUrl(value) ? trimString(value) : helpers.message('Image article invalide.')

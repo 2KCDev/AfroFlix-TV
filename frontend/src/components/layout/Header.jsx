@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiMenu, FiX, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiSearch, FiMenu, FiX, FiUser, FiLogOut, FiSettings, FiGlobe } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
+import { useLocale } from '../../hooks/useLocale';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
+  const { language, toggleLanguage, t } = useLocale();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -30,26 +32,37 @@ const Header = () => {
         
         <nav className="hidden md:flex gap-8">
           <Link to="/" className="text-gray-700 hover:text-red-600 transition font-medium">
-            Accueil
+            {t('nav.home')}
           </Link>
           <Link to="/films" className="text-gray-700 hover:text-red-600 transition font-medium">
-            Films
+            {t('common.films')}
           </Link>
           <Link to="/acteurs" className="text-gray-700 hover:text-red-600 transition font-medium">
-            Acteurs
+            {t('nav.actors')}
           </Link>
           <Link to="/actualites" className="text-gray-700 hover:text-red-600 transition font-medium">
-            Actualités
+            {t('nav.news')}
           </Link>
           <Link to="/classements" className="text-gray-700 hover:text-red-600 transition font-medium">
-            Classements
+            {t('nav.rankings')}
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4">
-          <Link to="/recherche" className="text-2xl text-gray-700 hover:text-red-600 transition" aria-label="Recherche">
+        <div className="flex items-center gap-3">
+          <Link to="/recherche" className="text-2xl text-gray-700 hover:text-red-600 transition" aria-label={t('nav.search')}>
             <FiSearch />
           </Link>
+
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-bold text-gray-700 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+            aria-label={t('language.switchTo')}
+            title={t('language.switchTo')}
+          >
+            <FiGlobe size={19} aria-hidden="true" />
+            <span>{language === 'fr' ? 'FR' : 'EN'}</span>
+          </button>
 
           {/* User Menu */}
           {isAuthenticated && user ? (
@@ -77,7 +90,7 @@ const Header = () => {
                     className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 transition"
                     onClick={() => setIsProfileOpen(false)}
                   >
-                    Mes favoris
+                    {t('nav.favorites')}
                   </Link>
 
                   {['admin', 'moderator', 'editor'].includes(user.role) ? (
@@ -87,7 +100,7 @@ const Header = () => {
                       onClick={() => setIsProfileOpen(false)}
                     >
                       <FiSettings size={16} />
-                      Administration
+                      {t('nav.administration')}
                     </Link>
                   ) : null}
                   
@@ -96,7 +109,7 @@ const Header = () => {
                     className="w-full text-left flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 transition"
                   >
                     <FiLogOut size={16} />
-                    Déconnexion
+                    {t('nav.logout')}
                   </button>
                 </div>
               )}
@@ -106,7 +119,7 @@ const Header = () => {
               to="/auth"
               className="hidden sm:inline px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
             >
-              Connexion
+              {t('nav.login')}
             </Link>
           )}
 
@@ -124,19 +137,19 @@ const Header = () => {
       {isOpen && (
         <nav className="md:hidden bg-gray-50 border-t px-4 py-4 flex flex-col gap-4">
           <Link to="/" onClick={closeMobileMenu} className="text-gray-700 hover:text-red-600 font-medium">
-            Accueil
+            {t('nav.home')}
           </Link>
           <Link to="/films" onClick={closeMobileMenu} className="text-gray-700 hover:text-red-600 font-medium">
-            Films
+            {t('common.films')}
           </Link>
           <Link to="/acteurs" onClick={closeMobileMenu} className="text-gray-700 hover:text-red-600 font-medium">
-            Acteurs
+            {t('nav.actors')}
           </Link>
           <Link to="/actualites" onClick={closeMobileMenu} className="text-gray-700 hover:text-red-600 font-medium">
-            Actualités
+            {t('nav.news')}
           </Link>
           <Link to="/classements" onClick={closeMobileMenu} className="text-gray-700 hover:text-red-600 font-medium">
-            Classements
+            {t('nav.rankings')}
           </Link>
           {!isAuthenticated && (
             <Link
@@ -144,7 +157,7 @@ const Header = () => {
               onClick={closeMobileMenu}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-center"
             >
-              Connexion
+              {t('nav.login')}
             </Link>
           )}
         </nav>

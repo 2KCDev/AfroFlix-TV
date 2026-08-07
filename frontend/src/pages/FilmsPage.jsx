@@ -11,8 +11,15 @@ import ErrorState from '../components/ErrorState';
 import { useFilms } from '../hooks/useFilms';
 import { api } from '../services/api';
 import { useListScrollRestoration } from '../utils/navigation';
+import { useLocale } from '../hooks/useLocale';
 
 const FilmsPage = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? {
+    films: 'Films', collection: 'Discover a collection of', africanFilms: 'African cinema films', filters: 'Filters', reset: 'Reset', search: 'Search by keyword', searchPlaceholder: 'Title, actor, director, country…', sort: 'Sort', recent: 'Most recent first', trending: 'Trending', rated: 'Top rated', genre: 'Genre', allGenres: 'All genres', year: 'Year', allYears: 'All years', error: 'Films cannot be loaded at the moment. Please try again shortly.', none: 'No films found', adjust: 'Try changing your filters',
+  } : {
+    films: 'Films', collection: 'Découvrez une collection de', africanFilms: 'films du cinéma africain', filters: 'Filtres', reset: 'Réinitialiser', search: 'Recherche par mots clés', searchPlaceholder: 'Titre, acteur, réalisateur, pays…', sort: 'Tri', recent: "Récents d'abord", trending: 'En tendance', rated: 'Mieux notés', genre: 'Genre', allGenres: 'Tous les genres', year: 'Année', allYears: 'Toutes les années', error: 'Impossible de charger les films pour le moment. Réessayez dans quelques instants.', none: 'Aucun film trouvé', adjust: 'Essayez de modifier vos filtres',
+  };
   const { genre: genreSlugFromRoute } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
@@ -84,7 +91,7 @@ const FilmsPage = () => {
       )}
       <Breadcrumbs
         items={[
-          { label: 'Films', to: '/films' },
+          { label: c.films, to: '/films' },
           ...(activeGenre ? [{ label: activeGenre.name }] : []),
         ]}
       />
@@ -92,10 +99,10 @@ const FilmsPage = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          {activeGenre ? `Films AfroFlix.TV ${activeGenre.name}` : 'Films AfroFlix.TV'}
+          {activeGenre ? `${c.films} AfroFlix.TV ${activeGenre.name}` : `${c.films} AfroFlix.TV`}
         </h1>
         <p className="text-gray-600">
-          Découvrez une collection de {filmsData?.total || 0} films du cinéma africain
+          {c.collection} {filmsData?.total || 0} {c.africanFilms}
         </p>
         {activeGenre?.description && (
           <p className="mt-4 max-w-3xl text-gray-700 leading-relaxed">
@@ -112,7 +119,7 @@ const FilmsPage = () => {
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold"
             >
               <FiFilter size={18} />
-              Filtres
+              {c.filters}
             </button>
             {(q || genre || year || sortBy !== 'created_at') && (
               <button
@@ -120,7 +127,7 @@ const FilmsPage = () => {
                 className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 font-semibold"
               >
                 <FiX size={18} />
-                Réinitialiser
+                {c.reset}
               </button>
             )}
           </div>
@@ -128,18 +135,18 @@ const FilmsPage = () => {
           {showFilters && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="mb-4">
-                <label className="mb-2 block font-bold text-gray-900">Recherche par mots clés</label>
+                <label className="mb-2 block font-bold text-gray-900">{c.search}</label>
                 <SearchSuggest
                   value={keywordTerm}
                   onChange={setKeywordTerm}
                   onSubmit={handleKeywordSearch}
-                  placeholder="Titre, acteur, réalisateur, pays..."
+                  placeholder={c.searchPlaceholder}
                   autoSubmit
                 />
               </div>
               <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <div>
-                <label className="block font-bold text-gray-900 mb-2">Tri</label>
+                <label className="block font-bold text-gray-900 mb-2">{c.sort}</label>
                 <select
                   value={sortBy}
                   onChange={(e) => {
@@ -147,15 +154,15 @@ const FilmsPage = () => {
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
                 >
-                  <option value="created_at">Récents d'abord</option>
-                  <option value="trending">En tendance</option>
-                  <option value="rating">Mieux notés</option>
+                  <option value="created_at">{c.recent}</option>
+                  <option value="trending">{c.trending}</option>
+                  <option value="rating">{c.rated}</option>
                   <option value="title">A-Z</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-gray-900 mb-2">Genre</label>
+                <label className="block font-bold text-gray-900 mb-2">{c.genre}</label>
                 <select
                   value={genre}
                   onChange={(e) => {
@@ -164,7 +171,7 @@ const FilmsPage = () => {
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
                 >
-                  <option value="">Tous les genres</option>
+                  <option value="">{c.allGenres}</option>
                   {genres.map((g) => (
                     <option key={g.id} value={g.slug}>
                       {g.name}
@@ -174,7 +181,7 @@ const FilmsPage = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-gray-900 mb-2">Année</label>
+                <label className="block font-bold text-gray-900 mb-2">{c.year}</label>
                 <select
                   value={year}
                   onChange={(e) => {
@@ -182,7 +189,7 @@ const FilmsPage = () => {
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
                 >
-                  <option value="">Toutes les années</option>
+                  <option value="">{c.allYears}</option>
                   {years.map((y) => (
                     <option key={y} value={y}>
                       {y}
@@ -198,7 +205,7 @@ const FilmsPage = () => {
           {loading ? (
             <LoadingSpinner />
           ) : error ? (
-            <ErrorState message="Impossible de charger les films pour le moment. Réessayez dans quelques instants." />
+            <ErrorState message={c.error} />
           ) : films.length > 0 ? (
             <>
               <FilmGrid films={films} columns="dense" />
@@ -214,8 +221,8 @@ const FilmsPage = () => {
             </>
           ) : (
             <div className="text-center py-16 bg-gray-50 rounded-lg">
-              <p className="text-gray-600 text-lg font-semibold">Aucun film trouvé</p>
-              <p className="text-gray-500 mt-2">Essayez de modifier vos filtres</p>
+              <p className="text-gray-600 text-lg font-semibold">{c.none}</p>
+              <p className="text-gray-500 mt-2">{c.adjust}</p>
             </div>
           )}
         </main>

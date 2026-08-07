@@ -36,3 +36,16 @@ button {
 .legal-content p {
   text-align: justify;
 }
+
+/* Make the main sections of every footer-linked legal page easy to scan. */
+.legal-content h2 {
+  margin-top: 1.75rem;
+  border-left: 4px solid #dc2626;
+  padding-left: 0.75rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.legal-content h2:first-child {
+  margin-top: 0;
+}

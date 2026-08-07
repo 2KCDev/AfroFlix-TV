@@ -755,12 +755,22 @@ const recordView = async (req, res) => {
 const search = async (req, res) => {
   try {
     const q = String(req.query.q || '').trim();
+    const language = req.query.lang === 'en' ? 'en' : 'fr';
     
     if (!q || q.length < 2 || q.length > 100) {
       return res.status(400).json({ error: 'Search query must be at least 2 characters' });
     }
 
     const searchTerm = `%${q.trim()}%`;
+    const actorBiography = language === 'en'
+      ? "COALESCE(NULLIF(a.biography_en, ''), a.biography)"
+      : 'a.biography';
+    const articleTitle = language === 'en'
+      ? "COALESCE(NULLIF(title_en, ''), title)"
+      : 'title';
+    const articleContent = language === 'en'
+      ? "COALESCE(NULLIF(content_en, ''), content)"
+      : 'content';
 
     // Search films
     const filmsResult = await pool.query(
@@ -787,7 +797,7 @@ const search = async (req, res) => {
 
     // Search actors
     const actorsResult = await pool.query(
-      `SELECT a.id, a.name, a.slug, a.photo_url, a.biography,
+      `SELECT a.id, a.name, a.slug, a.photo_url, a.biography, a.biography_en,
         (
           SELECT COUNT(*)
           FROM film_actors fa
@@ -796,15 +806,15 @@ const search = async (req, res) => {
         )::int AS film_count
        FROM actors a
        WHERE COALESCE(a.status, 'published') = 'published'
-         AND a.name ILIKE $1
+         AND (a.name ILIKE $1 OR ${actorBiography} ILIKE $1)
        LIMIT 10`,
       [searchTerm]
     );
 
     const articlesResult = await pool.query(
-      `SELECT id, title, slug, category, content FROM articles
+      `SELECT id, ${articleTitle} AS title, slug, category, ${articleContent} AS content FROM articles
        WHERE status = 'published' AND (
-         title ILIKE $1 OR content ILIKE $1 OR category ILIKE $1
+         ${articleTitle} ILIKE $1 OR ${articleContent} ILIKE $1 OR category ILIKE $1
        )
        LIMIT 10`,
       [searchTerm]

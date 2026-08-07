@@ -156,8 +156,8 @@ export const api = {
   film: (slug) => request(`/films/${slug}`, { cacheTtl: 15000 }),
   recordView: (filmId) =>
     request(`/films/${filmId}/views`, { method: 'POST' }),
-  search: (q) =>
-    request(`/films/search?q=${encodeURIComponent(q)}`),
+  search: (q, params = {}) =>
+    request(`/films/search${queryString({ q, ...params })}`),
   directors: () => request('/films/directors/list', { cacheTtl: 300000 }),
 
   // Actors
@@ -216,10 +216,12 @@ export const api = {
     request(`/films/manage/list${queryString(params)}`),
   adminActors: (params = {}) =>
     request(`/actors/manage/list${queryString(params)}`),
+  filmActorOptions: () => request('/actors/manage/options'),
   adminArticles: (params = {}) =>
     request(`/articles/manage/list${queryString(params)}`),
   adminGenres: (params = {}) =>
     request(`/genres/manage/list${queryString(params)}`),
+  filmGenreOptions: () => request('/genres/manage/options'),
   adminUsers: (params = {}) =>
     request(`/admin/users${queryString(params)}`),
   updateUserRole: (userId, role) =>

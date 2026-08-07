@@ -18,7 +18,10 @@ const ensureActorManagementColumns = () => {
     actorOwnershipMigration = pool.query(`
       ALTER TABLE actors
         ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'published';
+        ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'published',
+        ADD COLUMN IF NOT EXISTS biography_en TEXT;
+      -- Some existing production databases predate the optional field.
+      ALTER TABLE actors ALTER COLUMN birth_date DROP NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_actors_created_by ON actors(created_by);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_actors_name_unique_lower ON actors (LOWER(name));
     `);
@@ -46,6 +49,24 @@ const actorFilmCountSelect = `
     WHERE fa.actor_id = actors.id AND f.status = 'published'
   )::int AS film_count
 `;
+
+// Reference list used when linking actors to a film. Editors may link any
+// existing actor, but management of actor records remains restricted below.
+const getActorSelectionOptions = async (req, res) => {
+  try {
+    await ensureActorManagementColumns();
+    const result = await pool.query(
+      `SELECT id, name
+       FROM actors
+       ORDER BY name ASC`
+    );
+
+    res.json({ actors: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
 
 // GET manageable actors for admin/editor spaces.
 const getManageableActors = async (req, res) => {
@@ -201,7 +222,7 @@ const createActor = async (req, res) => {
     if (validation.error) {
       return res.status(400).json({ error: validation.error });
     }
-    const { name, biography, birth_date, photo_url } = validation.value;
+    const { name, biography, biography_en, birth_date, photo_url } = validation.value;
 
     const uniqueError = await assertUniqueActorName({ name });
     if (uniqueError) {
@@ -214,10 +235,10 @@ const createActor = async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO actors (name, slug, biography, birth_date, photo_url, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO actors (name, slug, biography, biography_en, birth_date, photo_url, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [name, slug, biography, birth_date, photo_url, req.user.id]
+      [name, slug, biography, biography_en || null, birth_date || null, photo_url, req.user.id]
     );
 
     res.status(201).json({ message: 'Actor created successfully', actor: result.rows[0] });
@@ -239,7 +260,7 @@ const updateActor = async (req, res) => {
     if (validation.error) {
       return res.status(400).json({ error: validation.error });
     }
-    const { name, biography, birth_date, photo_url } = validation.value;
+    const { name, biography, biography_en, birth_date, photo_url } = validation.value;
 
     const updateFields = [];
     const updateValues = [];
@@ -260,9 +281,13 @@ const updateActor = async (req, res) => {
       updateFields.push(`biography = $${paramIndex++}`);
       updateValues.push(biography);
     }
+    if (biography_en !== undefined) {
+      updateFields.push(`biography_en = $${paramIndex++}`);
+      updateValues.push(biography_en || null);
+    }
     if (birth_date !== undefined) {
       updateFields.push(`birth_date = $${paramIndex++}`);
-      updateValues.push(birth_date);
+      updateValues.push(birth_date || null);
     }
     if (photo_url !== undefined) {
       updateFields.push(`photo_url = $${paramIndex++}`);
@@ -369,6 +394,7 @@ const restoreActor = async (req, res) => {
 };
 
 module.exports = {
+  getActorSelectionOptions,
   getManageableActors,
   getAllActors,
   getActorBySlug,

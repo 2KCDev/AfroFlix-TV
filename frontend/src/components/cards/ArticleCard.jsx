@@ -1,8 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useLocale } from '../../hooks/useLocale';
+import { getLocalizedArticleExcerpt, localizeArticleCategory } from '../../utils/content';
 
 const ArticleCard = ({ article }) => {
+  const { language, t } = useLocale();
   const image = article.featured_image || article.imageUrl;
+  const title = language === 'en' && article.title_en?.trim() ? article.title_en : article.title;
+  const content = language === 'en' && article.content_en?.trim() ? article.content_en : article.content;
+  const excerpt = getLocalizedArticleExcerpt(article, language, 100);
   const date = article.published_at || article.created_at || article.createdAt;
 
   return (
@@ -16,19 +22,19 @@ const ArticleCard = ({ article }) => {
       >
         {image && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 transition group-hover:from-black/85" />}
         <h3 className={`relative line-clamp-2 font-bold transition ${image ? 'text-white' : 'text-gray-900 group-hover:text-red-600'}`}>
-          {article.title}
+          {title}
         </h3>
       </div>
       <div className="p-4">
         <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">
-          {article.category || 'Article'}
+          {localizeArticleCategory(article.category, language) || t('card.article')}
         </span>
         <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-          {article.excerpt || article.content?.substring(0, 100)}...
+          {excerpt || content?.substring(0, 100)}...
         </p>
         <div className="flex justify-between items-center text-xs text-gray-500 mt-3">
           <span>{article.readTime || '5'} min</span>
-          <span>{date ? new Date(date).toLocaleDateString('fr-FR') : 'Date à venir'}</span>
+          <span>{date ? new Date(date).toLocaleDateString(language === 'en' ? 'en-GB' : 'fr-FR') : t('card.comingSoon')}</span>
         </div>
       </div>
     </Link>

@@ -8,13 +8,14 @@ import AdminContentManager from '../components/admin/AdminContentManager';
 import AdminModerationQueue from '../components/admin/AdminModerationQueue';
 import AdminUsers from '../components/admin/AdminUsers';
 import AdminCompliance from '../components/admin/AdminCompliance';
+import { useLocale } from '../hooks/useLocale';
 
 const allTabs = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: FiBarChart2, roles: ['admin', 'editor'] },
-  { id: 'content', label: 'Contenus', icon: FiFileText, roles: ['admin', 'editor'] },
-  { id: 'moderation', label: 'Modération', icon: FiMessageSquare, roles: ['admin', 'moderator'] },
-  { id: 'users', label: 'Utilisateurs', icon: FiUsers, roles: ['admin'] },
-  { id: 'compliance', label: 'AdSense', icon: FiShield, roles: ['admin', 'moderator'] },
+  { id: 'dashboard', label: 'dashboard', icon: FiBarChart2, roles: ['admin', 'editor'] },
+  { id: 'content', label: 'content', icon: FiFileText, roles: ['admin', 'editor'] },
+  { id: 'moderation', label: 'moderation', icon: FiMessageSquare, roles: ['admin', 'moderator'] },
+  { id: 'users', label: 'users', icon: FiUsers, roles: ['admin'] },
+  { id: 'compliance', label: 'compliance', icon: FiShield, roles: ['admin', 'moderator'] },
 ];
 
 const roleLabels = {
@@ -24,6 +25,8 @@ const roleLabels = {
 };
 
 const AdminPanel = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? { dashboard: 'Dashboard', content: 'Content', moderation: 'Moderation', users: 'Users', compliance: 'AdSense', admin: 'Administrator', editor: 'Editor', moderator: 'Moderator', settings: 'Settings and profile management', private: 'Area not indexed by search engines', title: 'AFROFLIX.TV administration' } : { dashboard: 'Tableau de bord', content: 'Contenus', moderation: 'Modération', users: 'Utilisateurs', compliance: 'AdSense', admin: 'Administrateur', editor: 'Éditeur', moderator: 'Modérateur', settings: 'Paramètres et gestion des profils', private: 'Espace non indexé par les moteurs', title: 'Administration AFROFLIX.TV' };
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,9 +70,9 @@ const AdminPanel = () => {
     <div className="space-y-8">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Administration AFROFLIX.TV</h1>
+          <h1 className="text-4xl font-bold text-gray-900">{c.title}</h1>
           <p className="text-gray-600 mt-1">
-            {roleLabels[user?.role] || user?.role} · {user?.username || user?.email}
+            {(user?.role === 'admin' ? c.admin : user?.role === 'editor' ? c.editor : user?.role === 'moderator' ? c.moderator : user?.role)} · {user?.username || user?.email}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -77,7 +80,7 @@ const AdminPanel = () => {
             <button
               type="button"
               onClick={() => setActiveTab('users')}
-              title="Paramètres et gestion des profils"
+              title={c.settings}
               className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
             >
               <FiSettings size={20} />
@@ -85,7 +88,7 @@ const AdminPanel = () => {
           )}
           <div className="inline-flex items-center gap-2 bg-green-50 text-green-800 border border-green-200 rounded-lg px-4 py-2 text-sm font-semibold">
             <FiCheckSquare size={18} />
-            Espace non indexé par les moteurs
+            {c.private}
           </div>
         </div>
       </div>
@@ -107,7 +110,7 @@ const AdminPanel = () => {
                 }`}
               >
                 <Icon size={18} />
-                {tab.label}
+                {c[tab.label] || tab.label}
               </button>
             );
           })}

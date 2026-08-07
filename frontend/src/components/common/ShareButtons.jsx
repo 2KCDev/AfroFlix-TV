@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { FiCopy, FiFacebook, FiMessageCircle } from 'react-icons/fi';
+import { useLocale } from '../../hooks/useLocale';
 
 const getCurrentUrl = () => window.location.href;
 
 const ShareButtons = ({ title, compact = false }) => {
+  const { language } = useLocale();
   const [copied, setCopied] = useState(false);
   const url = typeof window !== 'undefined' ? getCurrentUrl() : '';
   const encodedUrl = encodeURIComponent(url);
@@ -27,7 +29,7 @@ const ShareButtons = ({ title, compact = false }) => {
         target="_blank"
         rel="noreferrer"
         className={compact ? `${baseClass} border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-600 hover:text-white` : itemClass}
-        aria-label="Partager sur Facebook"
+        aria-label={language === 'en' ? 'Share on Facebook' : 'Partager sur Facebook'}
         title="Facebook"
       >
         <FiFacebook size={18} />
@@ -38,7 +40,7 @@ const ShareButtons = ({ title, compact = false }) => {
         target="_blank"
         rel="noreferrer"
         className={compact ? `${baseClass} border-green-200 bg-green-50 text-green-700 hover:border-green-600 hover:bg-green-600 hover:text-white` : itemClass}
-        aria-label="Partager sur WhatsApp"
+        aria-label={language === 'en' ? 'Share on WhatsApp' : 'Partager sur WhatsApp'}
         title="WhatsApp"
       >
         <FiMessageCircle size={18} />
@@ -48,11 +50,11 @@ const ShareButtons = ({ title, compact = false }) => {
         type="button"
         onClick={copyLink}
         className={compact ? `${baseClass} border-gray-300 bg-white text-gray-700 hover:border-gray-900 hover:bg-gray-900 hover:text-white` : itemClass}
-        aria-label={copied ? 'Lien copié' : 'Copier le lien'}
-        title={copied ? 'Lien copié' : 'Copier'}
+        aria-label={copied ? (language === 'en' ? 'Link copied' : 'Lien copié') : (language === 'en' ? 'Copy link' : 'Copier le lien')}
+        title={copied ? (language === 'en' ? 'Link copied' : 'Lien copié') : (language === 'en' ? 'Copy' : 'Copier')}
       >
         <FiCopy size={18} />
-        {!compact && (copied ? 'Copié' : 'Copier')}
+        {!compact && (copied ? (language === 'en' ? 'Copied' : 'Copié') : (language === 'en' ? 'Copy' : 'Copier'))}
       </button>
     </div>
   );

@@ -4,8 +4,9 @@ import { FiAward, FiEye, FiStar, FiTrendingUp } from 'react-icons/fi';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { api } from '../services/api';
+import { useLocale } from '../hooks/useLocale';
 
-const RankingRow = ({ film, index, metric }) => (
+const RankingRow = ({ film, index, metric, unknownYear, posterAlt, score }) => (
   <Link
     to={`/films/${film.slug}`}
     className="grid grid-cols-[48px_64px_1fr_auto] gap-4 items-center bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition"
@@ -13,22 +14,26 @@ const RankingRow = ({ film, index, metric }) => (
     <div className="text-2xl font-bold text-red-600 text-center">{index + 1}</div>
     <img
       src={film.poster_url || 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=300&q=80'}
-      alt={`Affiche ${film.title}`}
+      alt={`${posterAlt} ${film.title}`}
       className="h-20 w-14 rounded object-cover bg-gray-200"
       loading="lazy"
     />
     <div className="min-w-0">
       <h3 className="font-bold text-gray-900 truncate">{film.title}</h3>
-      <p className="text-sm text-gray-500">{film.year || 'Année inconnue'} · {film.country || 'AfroFlix.TV'}</p>
+      <p className="text-sm text-gray-500">{film.year || unknownYear} · {film.country || 'AfroFlix.TV'}</p>
     </div>
     <div className="text-right">
       <p className="font-bold text-gray-900">{metric}</p>
-      <p className="text-xs text-gray-500">score</p>
+      <p className="text-xs text-gray-500">{score}</p>
     </div>
   </Link>
 );
 
 const RankingsPage = () => {
+  const { language } = useLocale();
+  const c = language === 'en'
+    ? { rankings: 'Rankings', title: 'AfroFlix.TV rankings', subtitle: 'Useful rankings to explore the most viewed, rated and shared films.', mostViewed: 'Most viewed films', topRated: 'Top-rated films', trending: 'AfroFlix.TV trends', views: 'views', unknownYear: 'Unknown year', poster: 'Poster', score: 'score' }
+    : { rankings: 'Classements', title: 'Classements AfroFlix.TV', subtitle: 'Des classements utiles pour explorer les films les plus consultés, notés et partagés.', mostViewed: 'Films les plus vus', topRated: 'Films les mieux notés', trending: 'Tendances AfroFlix.TV', views: 'vues', unknownYear: 'Année inconnue', poster: 'Affiche', score: 'score' };
   const [films, setFilms] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,35 +60,35 @@ const RankingsPage = () => {
 
   const sections = useMemo(() => [
     {
-      title: 'Films les plus vus',
+      title: c.mostViewed,
       icon: FiEye,
       items: films.popular || [],
-      metric: (film) => `${Number(film.views || 0).toLocaleString()} vues`,
+      metric: (film) => `${Number(film.views || 0).toLocaleString()} ${c.views}`,
     },
     {
-      title: 'Films les mieux notés',
+      title: c.topRated,
       icon: FiStar,
       items: films.rated || [],
       metric: (film) => `${Number(film.average_rating || 0).toFixed(1)}/5`,
     },
     {
-      title: 'Tendances AfroFlix.TV',
+      title: c.trending,
       icon: FiTrendingUp,
       items: films.trending || [],
-      metric: (film) => `${Number(film.views || 0).toLocaleString()} vues`,
+      metric: (film) => `${Number(film.views || 0).toLocaleString()} ${c.views}`,
     },
-  ], [films]);
+  ], [films, c]);
 
   return (
     <div className="space-y-8">
-      <Breadcrumbs items={[{ label: 'Classements' }]} />
+      <Breadcrumbs items={[{ label: c.rankings }]} />
 
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
           <FiAward className="text-red-600" />
-          Classements AfroFlix.TV
+          {c.title}
         </h1>
-        <p className="text-gray-600">Des classements utiles pour explorer les films les plus consultés, notés et partagés.</p>
+        <p className="text-gray-600">{c.subtitle}</p>
       </div>
 
       {loading ? (
@@ -100,7 +105,7 @@ const RankingsPage = () => {
                 </h2>
                 <div className="space-y-3">
                   {section.items.map((film, index) => (
-                    <RankingRow key={`${section.title}-${film.id}`} film={film} index={index} metric={section.metric(film)} />
+                    <RankingRow key={`${section.title}-${film.id}`} film={film} index={index} metric={section.metric(film)} unknownYear={c.unknownYear} posterAlt={c.poster} score={c.score} />
                   ))}
                 </div>
               </section>

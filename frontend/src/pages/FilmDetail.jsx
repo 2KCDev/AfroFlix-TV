@@ -11,6 +11,7 @@ import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { trackEvent } from '../services/analytics';
 import { ensureDirectDetailBackStack } from '../utils/navigation';
+import { useLocale } from '../hooks/useLocale';
 
 const getYouTubeEmbedUrl = (value) => {
   if (!value) return '';
@@ -58,11 +59,16 @@ const withAutoplay = (value) => {
   }
 };
 
-const YOUTUBE_OFFLINE_MESSAGE = 'Veuillez vérifier votre connexion Internet, puis réessayer.';
 const YOUTUBE_CONNECTIVITY_URL = 'https://www.youtube.com/generate_204';
 const playbackStorageKey = (videoUrl) => `afroflix:playback:${videoUrl}`;
 
 const FilmDetail = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? {
+    missing: 'Film not found', back: 'Back to films', similar: 'Similar videos', more: 'View more', suggestions: 'Suggestions will appear here when films from the same genre are published.', unknownYear: 'Unknown year', rating: 'Rating', saved: 'Your rating has been saved.', clickRate: 'Click a star to rate this film.', votes: 'votes', yourRating: 'Your rating', rateFilm: 'Rate this film', average: 'Average', saving: 'Saving your rating…', comments: 'Comments', moderated: 'approved', moderation: 'moderation active', closeComments: 'Close comments', report: 'Report', reported: 'Reported', reporting: 'Reporting…', noComments: 'No approved comments yet.', commentModeration: 'New comments are reviewed before publication.', name: 'Your name', email: 'Your email', write: 'Write a comment…', post: 'Post comment', watchLegal: 'Where to watch legally', official: 'Official video available', noVideo: 'No verified official video is associated with this film at the moment.', checking: 'Checking connection…', retry: 'Try again', noVerified: 'No verified official video is associated with this page.', favorite: 'Favourite', favourites: 'Favourites', synopsis: 'Synopsis', review: 'Our review', director: 'Director', producer: 'Producer', views: 'Views', status: 'Status', cast: 'Cast', min: 'min', viewCount: 'views', comment: 'comment', commentsPlural: 'comments', filmography: 'Filmography', offline: 'Please check your Internet connection, then try again.', ratingError: 'Unable to save your rating:', commentIdentity: 'Enter your name and email address to comment.', guestUser: 'AFROFLIX.TV user', commentPending: 'Your comment has been sent for moderation. It will appear after approval.', postError: 'Unable to post your comment:', reportThanks: 'Thank you. The comment has been reported to moderation.', reportError: 'Unable to report this comment at the moment.', genericError: 'Error:', seoTitle: (title) => `${title}: summary, cast and reviews`, seoDescription: (title) => `Discover ${title}, its cast, rating and reader reviews.`, breadcrumbsFilms: 'Films', videoTitle: (title) => `Video for ${title}`, openComments: (count) => `Open comments (${count})`, editorialFallback: 'The detailed editorial review will be added after review by the editorial team.'
+  } : {
+    missing: 'Film non trouvé', back: 'Retour aux films', similar: 'Vidéos similaires', more: 'Voir plus', suggestions: 'Les suggestions apparaîtront ici dès que des films du même genre seront publiés.', unknownYear: 'Année inconnue', rating: 'Notation', saved: 'Votre note est enregistrée.', clickRate: 'Cliquez sur une étoile pour noter ce film.', votes: 'votes', yourRating: 'Votre note', rateFilm: 'Noter ce film', average: 'Moyenne', saving: 'Enregistrement de votre note…', comments: 'Commentaires', moderated: 'validé', moderation: 'modération active', closeComments: 'Fermer les commentaires', report: 'Signaler', reported: 'Signalé', reporting: 'Signalement…', noComments: 'Aucun commentaire validé pour le moment.', commentModeration: 'Les nouveaux commentaires passent en modération avant publication.', name: 'Votre nom', email: 'Votre email', write: 'Écrire un commentaire…', post: 'Poster le commentaire', watchLegal: 'Où regarder légalement', official: 'Vidéo officielle disponible', noVideo: "Aucune vidéo officielle vérifiée n'est associée à cette fiche pour le moment.", checking: 'Vérification de la connexion…', retry: 'Réessayer', noVerified: "Aucune vidéo officielle vérifiée n'est associée à cette fiche.", favorite: 'Favori', favourites: 'Favoris', synopsis: 'Synopsis', review: 'Notre critique', director: 'Réalisateur', producer: 'Producteur', views: 'Vues', status: 'Statut', cast: 'Distribution', min: 'min', viewCount: 'vues', comment: 'commentaire', commentsPlural: 'commentaires', filmography: 'Filmographie', offline: 'Veuillez vérifier votre connexion Internet, puis réessayer.', ratingError: 'Erreur lors de la notation :', commentIdentity: 'Veuillez saisir votre nom et votre email pour commenter.', guestUser: 'Utilisateur AFROFLIX.TV', commentPending: 'Votre commentaire a été envoyé en modération. Il apparaîtra après validation.', postError: 'Erreur lors du post :', reportThanks: 'Merci. Le commentaire a été signalé à la modération.', reportError: 'Impossible de signaler ce commentaire pour le moment.', genericError: 'Erreur :', seoTitle: (title) => `${title} : résumé, acteurs et avis`, seoDescription: (title) => `Découvrez ${title}, son casting, sa note et les avis des lecteurs.`, breadcrumbsFilms: 'Films', videoTitle: (title) => `Vidéo de ${title}`, openComments: (count) => `Ouvrir les commentaires (${count})`, editorialFallback: 'La critique éditoriale détaillée sera ajoutée après validation par la rédaction.'
+  };
   const { slug } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
@@ -304,7 +310,7 @@ const FilmDetail = () => {
       const stats = await api.getRatingStats(film.id);
       setRatingStats(stats);
     } catch (error) {
-      alert('Erreur lors de la notation: ' + error.message);
+      alert(`${c.ratingError} ${error.message}`);
     } finally {
       setSubmittingRating(false);
     }
@@ -315,7 +321,7 @@ const FilmDetail = () => {
 
     if (!commentText.trim()) return;
     if (!isAuthenticated && (!guestName.trim() || !guestEmail.trim())) {
-      alert('Veuillez saisir votre nom et votre email pour commenter.');
+      alert(c.commentIdentity);
       return;
     }
 
@@ -326,13 +332,13 @@ const FilmDetail = () => {
         localStorage.setItem('afroflix_guest_email', guestEmail.trim());
       }
       await api.submitComment(film.id, commentText, {
-        name: isAuthenticated ? user?.username || user?.email || 'Utilisateur AFROFLIX.TV' : guestName.trim(),
+        name: isAuthenticated ? user?.username || user?.email || c.guestUser : guestName.trim(),
         email: isAuthenticated ? user?.email : guestEmail.trim(),
       });
-      setPendingCommentNotice('Votre commentaire a été envoyé en modération. Il apparaîtra après validation.');
+      setPendingCommentNotice(c.commentPending);
       setCommentText('');
     } catch (error) {
-      alert('Erreur lors du post: ' + error.message);
+      alert(`${c.postError} ${error.message}`);
     } finally {
       setSubmittingComment(false);
     }
@@ -349,7 +355,7 @@ const FilmDetail = () => {
       const nextReported = [...new Set([...reportedCommentIds, commentId])];
       setReportedCommentIds(nextReported);
       localStorage.setItem('afroflix_reported_comments', JSON.stringify(nextReported));
-      setCommentReportNotice(response.message || 'Merci. Le commentaire a été signalé à la modération.');
+      setCommentReportNotice(response.message || c.reportThanks);
 
       if (response.status === 'hidden') {
         setComments((current) => current.filter((comment) => comment.id !== commentId));
@@ -361,7 +367,7 @@ const FilmDetail = () => {
         setReportedCommentIds(nextReported);
         localStorage.setItem('afroflix_reported_comments', JSON.stringify(nextReported));
       }
-      setCommentReportNotice(error.message || 'Impossible de signaler ce commentaire pour le moment.');
+      setCommentReportNotice(error.message || c.reportError);
     } finally {
       setReportingCommentId(null);
     }
@@ -383,7 +389,7 @@ const FilmDetail = () => {
       }
       setIsFavorited(!isFavorited);
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      alert(`${c.genericError} ${error.message}`);
     }
   };
 
@@ -391,12 +397,12 @@ const FilmDetail = () => {
   if (!film) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-2xl font-bold text-gray-900">Film non trouvé</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{c.missing}</h2>
         <button
           onClick={() => navigate('/films')}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
         >
-          Retour aux films
+          {c.back}
         </button>
       </div>
     );
@@ -416,7 +422,7 @@ const FilmDetail = () => {
 
   const similarFilmsSection = (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-lg font-bold text-gray-900">Vidéos similaires</h2>
+      <h2 className="mb-4 text-lg font-bold text-gray-900">{c.similar}</h2>
       {visibleSimilarFilms.length > 0 ? (
         <div className="space-y-3">
           {visibleSimilarFilms.map((similar) => {
@@ -448,7 +454,7 @@ const FilmDetail = () => {
                     {similar.title}
                   </h3>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                    <span>{similar.year || 'Année inconnue'}</span>
+                    <span>{similar.year || c.unknownYear}</span>
                     <span className="inline-flex items-center gap-1 text-orange-700">
                       <FiStar size={13} fill="currentColor" />
                       {similarRating > 0 ? similarRating.toFixed(1) : 'N/A'}
@@ -464,13 +470,13 @@ const FilmDetail = () => {
               onClick={() => setVisibleSimilarCount((count) => count + 6)}
               className="mt-2 w-full rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50"
             >
-              Voir plus
+              {c.more}
             </button>
           )}
         </div>
       ) : (
         <p className="text-sm leading-relaxed text-gray-600">
-          Les suggestions apparaîtront ici dès que des films du même genre seront publiés.
+          {c.suggestions}
         </p>
       )}
     </div>
@@ -480,17 +486,17 @@ const FilmDetail = () => {
     <section className="rounded-lg border border-orange-200 bg-orange-50 p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Notation</h2>
+          <h2 className="text-lg font-bold text-gray-900">{c.rating}</h2>
           <p className="mt-1 text-sm text-gray-700">
             {hasUserRated
-              ? 'Votre note est enregistrée.'
-              : 'Cliquez sur une étoile pour noter ce film.'}
+              ? c.saved
+              : c.clickRate}
           </p>
         </div>
         <div className="rounded-lg bg-white px-4 py-3 text-right shadow-sm">
           <div className="text-3xl font-bold text-orange-600">{averageRating.toFixed(1)}</div>
           <div className="text-xs font-semibold text-gray-600">
-            {ratingCount} vote{ratingCount !== 1 ? 's' : ''}
+            {ratingCount} {c.votes}
           </div>
         </div>
       </div>
@@ -498,7 +504,7 @@ const FilmDetail = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-sm font-semibold text-gray-700">
-            {hasUserRated ? 'Votre note' : 'Noter ce film'}
+            {hasUserRated ? c.yourRating : c.rateFilm}
           </p>
           <StarRating
             rating={hasUserRated ? userRating : 0}
@@ -509,11 +515,11 @@ const FilmDetail = () => {
           />
         </div>
         <p className="text-sm font-semibold text-gray-700">
-          Moyenne: <span className="text-orange-700">{averageRating.toFixed(1)}/5</span>
+          {c.average}: <span className="text-orange-700">{averageRating.toFixed(1)}/5</span>
         </p>
       </div>
       {submittingRating && (
-        <p className="mt-3 text-sm font-semibold text-orange-700">Enregistrement de votre note...</p>
+        <p className="mt-3 text-sm font-semibold text-orange-700">{c.saving}</p>
       )}
     </section>
   );
@@ -536,17 +542,17 @@ const FilmDetail = () => {
           <div>
             <h2 id="comments-dialog-title" className="flex items-center gap-2 text-lg font-bold text-gray-900">
               <FiMessageSquare size={20} className="text-red-600" />
-              Commentaires
+              {c.comments}
             </h2>
             <p className="text-xs font-semibold text-gray-500">
-              {commentCount} validé{commentCount !== 1 ? 's' : ''} · modération active
+              {commentCount} {c.moderated} · {c.moderation}
             </p>
           </div>
           <button
             type="button"
             onClick={() => setCommentsOpen(false)}
             className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"
-            aria-label="Fermer les commentaires"
+            aria-label={c.closeComments}
           >
             <FiX size={18} />
           </button>
@@ -589,10 +595,10 @@ const FilmDetail = () => {
                     onClick={() => handleReportComment(comment.id)}
                     disabled={isReporting || isReported}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-400"
-                    aria-label={isReported ? 'Commentaire déjà signalé' : 'Signaler ce commentaire'}
+                    aria-label={isReported ? c.reported : c.report}
                   >
                     <FiFlag size={13} />
-                    {isReporting ? 'Signalement...' : isReported ? 'Signalé' : 'Signaler'}
+                    {isReporting ? c.reporting : isReported ? c.reported : c.report}
                   </button>
                 </div>
                 <p className="break-words rounded-lg bg-gray-50 px-3 py-2 text-sm leading-relaxed text-gray-800">
@@ -603,8 +609,8 @@ const FilmDetail = () => {
             })
           ) : (
             <div className="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-10 text-center">
-              <p className="font-semibold text-gray-800">Aucun commentaire validé pour le moment.</p>
-              <p className="mt-1 text-sm text-gray-600">Les nouveaux commentaires passent en modération avant publication.</p>
+              <p className="font-semibold text-gray-800">{c.noComments}</p>
+              <p className="mt-1 text-sm text-gray-600">{c.commentModeration}</p>
             </div>
           )}
         </div>
@@ -617,7 +623,7 @@ const FilmDetail = () => {
                   type="text"
                   value={guestName}
                   onChange={(event) => setGuestName(event.target.value)}
-                  placeholder="Votre nom"
+                  placeholder={c.name}
                   className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-red-500"
                   disabled={submittingComment}
                   required
@@ -626,7 +632,7 @@ const FilmDetail = () => {
                   type="email"
                   value={guestEmail}
                   onChange={(event) => setGuestEmail(event.target.value)}
-                  placeholder="Votre email"
+                  placeholder={c.email}
                   className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-red-500"
                   disabled={submittingComment}
                   required
@@ -637,7 +643,7 @@ const FilmDetail = () => {
               <textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Écrire un commentaire..."
+                placeholder={c.write}
                 className="min-h-11 flex-1 resize-none rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-red-500"
                 rows="2"
                 disabled={submittingComment}
@@ -646,7 +652,7 @@ const FilmDetail = () => {
                 type="submit"
                 disabled={submittingComment || !commentText.trim()}
                 className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                aria-label={submittingComment ? 'Envoi du commentaire' : 'Poster le commentaire'}
+                aria-label={c.post}
               >
                 <FiSend size={18} />
               </button>
@@ -660,8 +666,8 @@ const FilmDetail = () => {
   return (
     <div className="space-y-8">
       <SEO
-        title={`${film.title} : résumé, acteurs et avis`}
-        description={(film.description || `Découvrez ${film.title}, son casting, sa note et les avis des lecteurs.`).slice(0, 155)}
+        title={c.seoTitle(film.title)}
+        description={(film.description || c.seoDescription(film.title)).slice(0, 155)}
         image={posterUrl}
         type="video.movie"
         jsonLd={{
@@ -681,7 +687,7 @@ const FilmDetail = () => {
           } : undefined,
         }}
       />
-      <Breadcrumbs items={[{ label: 'Films', to: '/films' }, { label: film.title }]} />
+      <Breadcrumbs items={[{ label: c.breadcrumbsFilms, to: '/films' }, { label: film.title }]} />
 
       {/* Back Button */}
       <button
@@ -689,7 +695,7 @@ const FilmDetail = () => {
         className="flex items-center gap-2 text-red-600 hover:text-red-700 font-semibold"
       >
         <FiArrowLeft size={20} />
-        Retour aux films
+        {c.back}
       </button>
 
       {/* Watch Section */}
@@ -712,13 +718,13 @@ const FilmDetail = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-3 text-sm">
               <span className="rounded-lg bg-gray-100 px-3 py-2 font-semibold text-gray-800">
-                {Number(film.views || 0).toLocaleString()} vues
+                {Number(film.views || 0).toLocaleString()} {c.viewCount}
               </span>
               <span className="rounded-lg bg-orange-100 px-3 py-2 font-semibold text-orange-800">
                 {averageRating.toFixed(1)}/5
               </span>
               <span className="rounded-lg bg-red-100 px-3 py-2 font-semibold text-red-800">
-                {commentCount} commentaire{commentCount !== 1 ? 's' : ''}
+                {commentCount} {commentCount === 1 ? c.comment : c.commentsPlural}
               </span>
             </div>
           </div>
@@ -729,7 +735,7 @@ const FilmDetail = () => {
                 <iframe
                   key={`${videoUrl}-${videoRetryKey}`}
                   src={autoplayVideoUrl}
-                  title={`Vidéo de ${film.title}`}
+                  title={c.videoTitle(film.title)}
                   className="h-full w-full border-0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
@@ -742,7 +748,7 @@ const FilmDetail = () => {
                 <div className="flex h-full w-full items-center justify-center bg-gray-950 p-6 text-center">
                   <div>
                     <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-red-600"></div>
-                    <p className="mt-4 font-semibold text-white">Vérification de la connexion...</p>
+                    <p className="mt-4 font-semibold text-white">{c.checking}</p>
                   </div>
                 </div>
               ) : (
@@ -756,14 +762,14 @@ const FilmDetail = () => {
                   />
                   <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                     <div className="max-w-md rounded-lg bg-black/75 px-5 py-4 text-white shadow-lg">
-                      <p className="text-base font-semibold">{YOUTUBE_OFFLINE_MESSAGE}</p>
+                      <p className="text-base font-semibold">{c.offline}</p>
                       <button
                         type="button"
                         onClick={handleRetryVideo}
                         className="mt-4 inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700"
                       >
                         <FiRefreshCw size={16} />
-                        Réessayer
+                        {c.retry}
                       </button>
                     </div>
                   </div>
@@ -781,7 +787,7 @@ const FilmDetail = () => {
               />
               <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                 <p className="max-w-md rounded-lg bg-black/70 px-5 py-4 font-semibold text-white">
-                  Aucune vidéo officielle vérifiée n'est associée à cette fiche.
+                  {c.noVerified}
                 </p>
               </div>
             </div>
@@ -799,7 +805,7 @@ const FilmDetail = () => {
                 }`}
               >
                 <FiHeart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
-                {isFavorited ? 'Favori' : 'Favoris'}
+                {isFavorited ? c.favorite : c.favourites}
               </button>
               <button
                 type="button"
@@ -810,8 +816,8 @@ const FilmDetail = () => {
                     : 'border border-gray-200 bg-white text-gray-800 hover:border-red-600 hover:text-red-700'
                 }`}
                 aria-expanded={commentsOpen}
-                aria-label={`Ouvrir les commentaires (${commentCount})`}
-                title="Commentaires"
+                aria-label={c.openComments(commentCount)}
+                title={c.comments}
               >
                 <FiMessageSquare size={18} />
                 <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
@@ -827,7 +833,7 @@ const FilmDetail = () => {
           {ratingSection}
 
           <div className="rounded-lg border border-green-200 bg-green-50 p-5">
-            <h3 className="font-bold text-gray-900 mb-2">Où regarder légalement</h3>
+            <h3 className="font-bold text-gray-900 mb-2">{c.watchLegal}</h3>
             {videoUrl ? (
               <a
                 href={film.youtube_embed_url || film.video_url || videoUrl}
@@ -836,11 +842,11 @@ const FilmDetail = () => {
                 onClick={() => trackEvent('click', { link_type: 'official_video', film_id: String(film.id), film_title: film.title })}
                 className="inline-flex items-center gap-2 text-green-800 font-semibold hover:text-green-900"
               >
-                Vidéo officielle disponible <FiExternalLink size={16} />
+                {c.official} <FiExternalLink size={16} />
               </a>
             ) : (
               <p className="text-gray-700">
-                Aucune vidéo officielle vérifiée n'est associée à cette fiche pour le moment.
+                {c.noVideo}
               </p>
             )}
           </div>
@@ -853,33 +859,33 @@ const FilmDetail = () => {
         <div className="space-y-6">
           {/* Description */}
           <div>
-            <h3 className="font-bold text-gray-900 mb-2">Synopsis</h3>
+            <h3 className="font-bold text-gray-900 mb-2">{c.synopsis}</h3>
             <p className="break-words text-justify text-gray-700 leading-relaxed">{film.description}</p>
           </div>
 
           <div>
-            <h3 className="font-bold text-gray-900 mb-2">Notre critique</h3>
+            <h3 className="font-bold text-gray-900 mb-2">{c.review}</h3>
             <p className="break-words text-gray-700 leading-relaxed">
-              {film.editorial_review || film.review || film.critique || 'La critique éditoriale détaillée sera ajoutée après validation par la rédaction.'}
+              {film.editorial_review || film.review || film.critique || c.editorialFallback}
             </p>
           </div>
 
           {/* Key Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-600">Réalisateur</p>
+              <p className="text-sm text-gray-600">{c.director}</p>
               <p className="font-semibold text-gray-900">{film.director || '—'}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Producteur</p>
+              <p className="text-sm text-gray-600">{c.producer}</p>
               <p className="font-semibold text-gray-900">{film.producer || '—'}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Vues</p>
+              <p className="text-sm text-gray-600">{c.views}</p>
               <p className="font-semibold text-gray-900">{film.views || 0}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Statut</p>
+              <p className="text-sm text-gray-600">{c.status}</p>
               <p className="font-semibold text-gray-900 capitalize">{film.status}</p>
             </div>
           </div>
@@ -890,7 +896,7 @@ const FilmDetail = () => {
       {/* Cast Section */}
       {actors.length > 0 && (
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Distribution</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{c.cast}</h2>
           <div className="flex flex-wrap gap-3">
             {actors.map((actor, idx) => (
               <Link

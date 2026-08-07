@@ -49,6 +49,24 @@ const getManageableGenres = async (req, res) => {
   }
 };
 
+// Reference list used when linking genres to a film. This deliberately does
+// not grant editors any genre-management permission.
+const getGenreSelectionOptions = async (req, res) => {
+  try {
+    await ensureGenreManagementColumns();
+    const result = await pool.query(
+      `SELECT id, name, slug
+       FROM genres
+       ORDER BY name`
+    );
+
+    res.json({ genres: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // GET films by genre with pagination
 const getFilmsByGenre = async (req, res) => {
   try {
@@ -240,6 +258,7 @@ const restoreGenre = async (req, res) => {
 module.exports = {
   getAllGenres,
   getManageableGenres,
+  getGenreSelectionOptions,
   getFilmsByGenre,
   createGenre,
   updateGenre,

@@ -11,9 +11,9 @@ export const normalizeListResponse = (response, key) => {
   };
 };
 
-export const formatDate = (value) => {
-  if (!value) return 'Non renseigné';
-  return new Date(value).toLocaleDateString('fr-FR', {
+export const formatDate = (value, locale = 'fr-FR', emptyLabel = 'Non renseigné') => {
+  if (!value) return emptyLabel;
+  return new Date(value).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -25,6 +25,37 @@ export const truncateText = (value = '', max = 160) => {
   return `${value.slice(0, max).trim()}...`;
 };
 
+export const getLocalizedArticleContent = (article, language) => (
+  language === 'en' && article?.content_en?.trim()
+    ? article.content_en
+    : article?.content
+);
+
+export const getLocalizedArticleExcerpt = (article, language, maxLength = 0) => {
+  const content = getLocalizedArticleContent(article, language) || '';
+  const excerpt = language === 'en' && article?.content_en?.trim()
+    ? content
+    : article?.excerpt || content;
+
+  return maxLength ? excerpt.slice(0, maxLength) : excerpt;
+};
+
+export const localizeArticleCategory = (category, language) => {
+  if (language !== 'en') return category;
+
+  const translations = {
+    Actualités: 'News',
+    Classements: 'Rankings',
+    Analyses: 'Analysis',
+    Conseils: 'Tips',
+    Dossiers: 'Features',
+    Portraits: 'Profiles',
+    Guides: 'Guides',
+  };
+
+  return translations[category] || category;
+};
+
 export const getImage = (item, fields, fallback) => {
   for (const field of fields) {
     if (item?.[field]) return item[field];
@@ -33,4 +64,3 @@ export const getImage = (item, fields, fallback) => {
 };
 
 export const publicFilmUrl = (slug) => `/films/${slug}`;
-

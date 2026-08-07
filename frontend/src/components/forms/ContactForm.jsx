@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiSend } from 'react-icons/fi';
 import { api } from '../../services/api';
+import { useLocale } from '../../hooks/useLocale';
 
 const initialState = {
   name: '',
@@ -10,6 +11,8 @@ const initialState = {
 };
 
 const ContactForm = () => {
+  const { language } = useLocale();
+  const c = language === 'en' ? { sent: 'Your message has been sent.', error: 'Unable to send the message.', name: 'Name', subject: 'Subject', message: 'Message', placeholder: 'Question, partnership, report…', characters: 'characters', sending: 'Sending…', send: 'Send message' } : { sent: 'Votre message a bien été envoyé.', error: 'Impossible d’envoyer le message.', name: 'Nom', subject: 'Sujet', message: 'Message', placeholder: 'Question, partenariat, signalement…', characters: 'caractères', sending: 'Envoi…', send: 'Envoyer le message' };
   const [form, setForm] = useState(initialState);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -25,10 +28,10 @@ const ContactForm = () => {
 
     try {
       const response = await api.contact(form);
-      setStatus({ type: 'success', message: response.message || 'Votre message a bien été envoyé.' });
+      setStatus({ type: 'success', message: response.message || c.sent });
       setForm(initialState);
     } catch (error) {
-      setStatus({ type: 'error', message: error.message || 'Impossible d’envoyer le message.' });
+      setStatus({ type: 'error', message: error.message || c.error });
     } finally {
       setSubmitting(false);
     }
@@ -39,7 +42,7 @@ const ContactForm = () => {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div>
           <label htmlFor="contact-name" className="mb-2 block text-sm font-semibold text-gray-800">
-            Nom
+            {c.name}
           </label>
           <input
             id="contact-name"
@@ -68,7 +71,7 @@ const ContactForm = () => {
 
       <div>
         <label htmlFor="contact-subject" className="mb-2 block text-sm font-semibold text-gray-800">
-          Sujet
+          {c.subject}
         </label>
         <input
           id="contact-subject"
@@ -76,13 +79,13 @@ const ContactForm = () => {
           value={form.subject}
           onChange={(event) => updateField('subject', event.target.value)}
           className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
-          placeholder="Question, partenariat, signalement..."
+          placeholder={c.placeholder}
         />
       </div>
 
       <div>
         <label htmlFor="contact-message" className="mb-2 block text-sm font-semibold text-gray-800">
-          Message
+          {c.message}
         </label>
         <textarea
           id="contact-message"
@@ -93,7 +96,7 @@ const ContactForm = () => {
           maxLength={3000}
           required
         />
-        <p className="mt-2 text-xs text-gray-500">{form.message.length}/3000 caractères</p>
+        <p className="mt-2 text-xs text-gray-500">{form.message.length}/3000 {c.characters}</p>
       </div>
 
       {status.message && (
@@ -114,7 +117,7 @@ const ContactForm = () => {
         className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <FiSend size={18} />
-        {submitting ? 'Envoi...' : 'Envoyer le message'}
+        {submitting ? c.sending : c.send}
       </button>
     </form>
   );

@@ -2,8 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiStar, FiHeart, FiPlay } from 'react-icons/fi';
 import { FiHeart as FiHeartFilled } from 'react-icons/fi';
+import { useLocale } from '../../hooks/useLocale';
 
 const FilmCard = ({ film, isFavorited = false, onFavoriteToggle, eager = false }) => {
+  const { t } = useLocale();
   const rating = Number(film.average_rating ?? film.averageRating);
   const displayRating = Number.isFinite(rating) && rating > 0 ? rating.toFixed(1) : 'N/A';
   const posterUrl = film.poster_url || film.posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
@@ -36,7 +38,7 @@ const FilmCard = ({ film, isFavorited = false, onFavoriteToggle, eager = false }
 
         {/* Views Badge */}
         <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
-          {film.views || 0} vues
+          {film.views || 0} {t('card.views')}
         </div>
       </Link>
 
@@ -57,7 +59,7 @@ const FilmCard = ({ film, isFavorited = false, onFavoriteToggle, eager = false }
 
         {/* Description */}
         <p className="mb-3 line-clamp-1 break-words text-sm text-gray-600">
-          {film.description || 'Pas de description disponible'}
+          {film.description || t('card.noDescription')}
         </p>
 
         {/* Footer */}
@@ -66,13 +68,13 @@ const FilmCard = ({ film, isFavorited = false, onFavoriteToggle, eager = false }
             to={`/films/${film.slug}`}
             className="flex-grow px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition text-center"
           >
-            Voir plus
+            {t('card.viewMore')}
           </Link>
           {onFavoriteToggle && (
             <button
               onClick={() => onFavoriteToggle(film.id)}
               className="p-2 border-2 border-gray-300 hover:border-red-600 rounded-lg transition"
-              title="Ajouter aux favoris"
+              title={t('card.addFavorite')}
             >
               {isFavorited ? (
                 <FiHeartFilled size={18} className="text-red-600" />

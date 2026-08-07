@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const genresController = require('../controllers/genresController');
-const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { authMiddleware, adminOnly, editorOrAdmin } = require('../middleware/auth');
 
 // Public routes
 router.get('/', genresController.getAllGenres);
+router.get('/manage/options', authMiddleware, editorOrAdmin, genresController.getGenreSelectionOptions);
 router.get('/manage/list', authMiddleware, adminOnly, genresController.getManageableGenres);
 router.get('/:slug/films', genresController.getFilmsByGenre);
 
